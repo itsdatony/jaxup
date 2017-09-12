@@ -1,30 +1,24 @@
 #include <iostream>
-#include <sstream>
+#include <chrono>
+#include <fstream>
 #include "jaxup.h"
-
-static const std::string trueText = "true";
-static const std::string falseText = "false";
-static const std::string nullText = " \t\r\nnull,";
-static const std::string doubleText = " \t\r\n[1012e0, {\"hey\" : 1.2} ]";
 
 using namespace jaxup;
 
 int main(int argc, char* argv[]) {
-	std::istringstream iss(doubleText);
+	auto start = std::chrono::high_resolution_clock::now();
+	std::ifstream inputFile(argv[1]);
 
 	JsonFactory factory;
-	std::shared_ptr<JsonParser> parser = factory.createJsonParser(iss);
+	std::shared_ptr<JsonParser> parser = factory.createJsonParser(inputFile);
 	JsonToken token;
+	int i = 0;
 	while ((token = parser->nextToken()) != JsonToken::NOT_AVAILABLE) {
-		if (token == JsonToken::VALUE_NUMBER_FLOAT) {
-			std::cout << "Double value: " << parser->getDoubleValue() << std::endl;
-			std::cout << "Long value: " << parser->getLongValue() << std::endl;
-		} else if (token == JsonToken::VALUE_STRING) {
-			std::cout << "String value: " << parser->getText() << std::endl;
-		} else {
-			std::cout << "Other token: " << (int)parser->currentToken() << std::endl;
-		}
+		++i;
 	}
-	std::cout << "Hello world" << std::endl;
+	auto end = std::chrono::high_resolution_clock::now();
+	auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+	std::cout << "Microseconds: " << duration << std::endl;
+	std::cout << "Total token count: " << i << std::endl;
 }
 

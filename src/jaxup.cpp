@@ -413,11 +413,11 @@ private:
 		return c == ' ' || c == '\t' || c == '\r' || c == '\n';
 	}
 
-	inline bool isDigit(char c) {
+	static inline bool isDigit(char c) {
 		return '0' <= c && c <= '9';
 	}
 
-	inline bool isDelimiter(char c) {
+	static inline bool isDelimiter(char c) {
 		return c == ',' || c == ':' || c == ']' || c == '}'
 				|| isInsignificantWhitespace(c);
 	}
