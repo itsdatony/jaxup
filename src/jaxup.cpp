@@ -182,15 +182,34 @@ private:
 		buff.clear();
 		long code;
 		char c;
-		while (readNextCharacter(&c)) {
+		int runStart;
+		while (true) {
+			runStart = inputOffset;
+			while (inputOffset < inputSize) {
+				c = inputBuffer[inputOffset];
+				if ((c < ' ' && c >= 0) || c == '"' || c == '\\') {
+					break;
+				}
+				++inputOffset;
+			}
+
+			if (inputOffset > runStart) {
+				buff.append(&inputBuffer[runStart], inputOffset - runStart);
+			}
+
+			if (inputOffset > inputSize - 1) {
+				if (!loadMore()) {
+					throw JsonException("String was not terminated");
+				}
+				continue;
+			}
+
+			++inputOffset;
 			if (c == '"') {
 				if (!nextIsDelimiter()) {
 					throw JsonException("Invalid string");
 				}
 				return;
-			} else if (c < ' ' && c >= 0) {
-				std::cerr << "Unexpected value " << (int) c << std::endl;
-				throw JsonException("Unescaped control character");
 			} else if (c == '\\') {
 				readNextCharacter(&c);
 				switch (c) {
@@ -231,7 +250,8 @@ private:
 					throw JsonException("Invalid escape code");
 				}
 			} else {
-				buff.push_back(c);
+				std::cerr << "Unexpected value " << (int) c << std::endl;
+				throw JsonException("Unescaped control character");
 			}
 		}
 		throw JsonException("String was not terminated");
@@ -553,14 +573,14 @@ public:
 	void write(std::nullptr_t null) override {
 		prepareWriteValue();
 		token = JsonToken::VALUE_NULL;
-		output << "null";
+		output.write("null", 4);
 	}
 
 	void write(const char* value) override {
 		prepareWriteValue();
 		if (value == nullptr) {
 			token = JsonToken::VALUE_NULL;
-			output << "null";
+			output.write("null", 4);
 			return;
 		}
 		token = JsonToken::VALUE_STRING;
@@ -618,37 +638,6 @@ public:
 		token = JsonToken::END_ARRAY;
 		tagStack.pop_back();
 		output << ']';
-	}
-
-	void writeField(const std::string& field, double value) override {
-		writeFieldName(field);
-		write(value);
-	}
-
-	void writeField(const std::string& field, long value) override {
-		writeFieldName(field);
-		write(value);
-	}
-
-	void writeField(const std::string& field, bool value) override {
-		writeFieldName(field);
-		write(value);
-	}
-
-	void writeField(const std::string& field, std::nullptr_t null) override {
-		writeFieldName(field);
-		write(null);
-	}
-
-	void writeField(const std::string& field, const std::string& value)
-			override {
-		writeFieldName(field);
-		write(value);
-	}
-
-	void writeField(const std::string& field, const char* value) override {
-		writeFieldName(field);
-		write(value);
 	}
 };
 

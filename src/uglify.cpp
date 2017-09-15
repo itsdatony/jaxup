@@ -5,18 +5,15 @@
 
 using namespace jaxup;
 
-int main(int argc, char* argv[]) {
-	auto start = std::chrono::high_resolution_clock::now();
-	std::ifstream inputFile(argv[1]);
-	std::ofstream outputFile(argv[2]);
-
+int streamingCopy(std::ifstream& inputFile, std::ofstream& outputFile) {
 	JsonFactory factory;
 	std::shared_ptr<JsonParser> parser = factory.createJsonParser(inputFile);
-	std::shared_ptr<JsonGenerator> generator = factory.createJsonGenerator(outputFile);
+	std::shared_ptr<JsonGenerator> generator = factory.createJsonGenerator(
+			outputFile);
 	JsonToken token;
 	int i = 0;
 	while ((token = parser->nextToken()) != JsonToken::NOT_AVAILABLE) {
-		switch(token) {
+		switch (token) {
 		case JsonToken::END_ARRAY:
 			generator->endArray();
 			break;
@@ -53,9 +50,28 @@ int main(int argc, char* argv[]) {
 		}
 		++i;
 	}
+
+	return i;
+}
+
+int main(int argc, char* argv[]) {
+	auto start = std::chrono::high_resolution_clock::now();
+	std::ifstream inputFile(argv[1]);
+	std::ofstream outputFile(argv[2]);
+
+	int numTokens = 0;
+	try {
+		numTokens = streamingCopy(inputFile, outputFile);
+	} catch (const JsonException& e) {
+		std::cerr << "Failed to uglify file: " << e.what() << std::endl;
+	}
+
 	auto end = std::chrono::high_resolution_clock::now();
-	auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+	auto duration = std::chrono::duration_cast<std::chrono::microseconds>(
+			end - start).count();
 	std::cout << "Microseconds: " << duration << std::endl;
-	std::cout << "Total token count: " << i << std::endl;
+	std::cout << "Total token count: " << numTokens << std::endl;
+
+	return 0;
 }
 

@@ -57,14 +57,14 @@ public:
 	virtual void write(std::nullptr_t null) = 0;
 	virtual void write(const std::string& value) = 0;
 	virtual void write(const char* value) = 0;
-	virtual void writeField(const std::string& field, double value) = 0;
-	virtual void writeField(const std::string& field, long value) = 0;
-	virtual void writeField(const std::string& field, bool value) = 0;
-	virtual void writeField(const std::string& field, std::nullptr_t null) = 0;
-	virtual void writeField(const std::string& field,
-			const std::string& value) = 0;
-	virtual void writeField(const std::string& field, const char* value) = 0;
 	virtual void writeFieldName(const std::string& field) = 0;
+
+	template<class T> inline void writeField(const std::string& field,
+			T value) {
+		writeFieldName(field);
+		write(value);
+	}
+
 	virtual void startObject() = 0;
 	virtual void endObject() = 0;
 	virtual void startArray() = 0;

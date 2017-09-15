@@ -20,5 +20,7 @@ int main(int argc, char* argv[]) {
 	auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
 	std::cout << "Microseconds: " << duration << std::endl;
 	std::cout << "Total token count: " << i << std::endl;
+
+	return 0;
 }
 
