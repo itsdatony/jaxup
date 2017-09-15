@@ -48,9 +48,34 @@ public:
 	virtual JsonParser& skipChildren() = 0;
 };
 
+class JsonGenerator {
+public:
+	virtual ~JsonGenerator() = default;
+	virtual void write(double value) = 0;
+	virtual void write(long value) = 0;
+	virtual void write(bool value) = 0;
+	virtual void write(std::nullptr_t null) = 0;
+	virtual void write(const std::string& value) = 0;
+	virtual void write(const char* value) = 0;
+	virtual void writeField(const std::string& field, double value) = 0;
+	virtual void writeField(const std::string& field, long value) = 0;
+	virtual void writeField(const std::string& field, bool value) = 0;
+	virtual void writeField(const std::string& field, std::nullptr_t null) = 0;
+	virtual void writeField(const std::string& field,
+			const std::string& value) = 0;
+	virtual void writeField(const std::string& field, const char* value) = 0;
+	virtual void writeFieldName(const std::string& field) = 0;
+	virtual void startObject() = 0;
+	virtual void endObject() = 0;
+	virtual void startArray() = 0;
+	virtual void endArray() = 0;
+};
+
 class JsonFactory {
 public:
 	std::shared_ptr<JsonParser> createJsonParser(std::istream& inputStream);
+	std::shared_ptr<JsonGenerator> createJsonGenerator(
+			std::ostream& outputStream, bool prettyPrint = false);
 };
 
 }

@@ -11,6 +11,7 @@ else()
 endif()
 
 add_executable(grank src/main.cpp src/jaxup.cpp)
+add_executable(uglify src/uglify.cpp src/jaxup.cpp)
 
 install(TARGETS grank
 	RUNTIME DESTINATION bin)

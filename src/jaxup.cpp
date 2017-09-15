@@ -188,7 +188,8 @@ private:
 					throw JsonException("Invalid string");
 				}
 				return;
-			} else if (c < ' ') {
+			} else if (c < ' ' && c >= 0) {
+				std::cerr << "Unexpected value " << (int) c << std::endl;
 				throw JsonException("Unescaped control character");
 			} else if (c == '\\') {
 				readNextCharacter(&c);
@@ -439,12 +440,226 @@ private:
 		}
 		return nextIsDelimiter();
 	}
-}
-;
+};
+
+class ConcreteJsonGenerator: public JsonGenerator {
+private:
+	std::ostream& output;
+	JsonToken token = JsonToken::NOT_AVAILABLE;
+	int indentLevel = 0;
+	std::vector<JsonToken> tagStack;
+	char unicodeBuff[6] = { '\\', 'u', '0', '0', '0', '0' };
+	bool prettyPrint;
+
+	inline void prepareWriteValue() {
+		if (!tagStack.empty()) {
+			JsonToken parent = tagStack.back();
+			if (parent == JsonToken::START_OBJECT
+					&& token != JsonToken::FIELD_NAME) {
+				throw JsonException(
+						"Tried to write a value without giving it a field name");
+			}
+			if (parent == JsonToken::START_ARRAY
+					&& token != JsonToken::START_ARRAY) {
+				output << ',';
+			}
+		}
+	}
+
+	inline void encodeString(const char* value, long length = -1) {
+		output << '"';
+		long run = 0;
+		long runStart = -1;
+		for (long i = 0; value[i] != 0 || i < length; ++i) {
+			char c = value[i];
+			if ((c >= ' ' || c < 0) && c != '"' && c != '\\') {
+				if (runStart < 0) {
+					runStart = i;
+				}
+				++run;
+				continue;
+			}
+			if (run > 0) {
+				output.write(&value[runStart], run);
+				run = 0;
+				runStart = -1;
+			}
+
+			switch (c) {
+			case '"':
+				output.write("\\\"", 2);
+				break;
+			case '\\':
+				output.write("\\\\", 2);
+				break;
+			case '\b':
+				output.write("\\b", 2);
+				break;
+			case '\f':
+				output.write("\\f", 2);
+				break;
+			case '\n':
+				output.write("\\n", 2);
+				break;
+			case '\r':
+				output.write("\\r", 2);
+				break;
+			case '\t':
+				output.write("\\t", 2);
+				break;
+			default:
+				unicodeBuff[4] = (c >> 4) + '0'; // '0' or '1'
+				c = c & 0xF;
+				if (c < 10) {
+					unicodeBuff[5] = c + '0';
+				} else {
+					unicodeBuff[5] = c - 10 + 'A';
+				}
+				output.write(unicodeBuff, 6);
+			}
+		}
+		if (run > 0) {
+			output.write(&value[runStart], run);
+		}
+		output << '"';
+	}
+
+public:
+	ConcreteJsonGenerator(std::ostream& outputStream, bool prettyPrint) :
+			output(outputStream), prettyPrint(prettyPrint) {
+		tagStack.reserve(32);
+	}
+
+	virtual ~ConcreteJsonGenerator() = default;
+
+	void write(double value) override {
+		prepareWriteValue();
+		token = JsonToken::VALUE_NUMBER_FLOAT;
+		output << value;
+	}
+
+	void write(long value) override {
+		prepareWriteValue();
+		token = JsonToken::VALUE_NUMBER_INT;
+		output << value;
+	}
+
+	void write(bool value) override {
+		prepareWriteValue();
+		token = value ? JsonToken::VALUE_TRUE : JsonToken::VALUE_FALSE;
+		output << value;
+	}
+
+	void write(std::nullptr_t null) override {
+		prepareWriteValue();
+		token = JsonToken::VALUE_NULL;
+		output << "null";
+	}
+
+	void write(const char* value) override {
+		prepareWriteValue();
+		if (value == nullptr) {
+			token = JsonToken::VALUE_NULL;
+			output << "null";
+			return;
+		}
+		token = JsonToken::VALUE_STRING;
+		encodeString(value);
+	}
+
+	void write(const std::string& value) override {
+		prepareWriteValue();
+		token = JsonToken::VALUE_STRING;
+		encodeString(value.c_str(), value.length());
+	}
+
+	void writeFieldName(const std::string& field) override {
+		if (tagStack.empty() || tagStack.back() != JsonToken::START_OBJECT) {
+			throw JsonException(
+					"Tried to write a field name outside of an object");
+		}
+		if (token != JsonToken::START_OBJECT) {
+			output << ',';
+		}
+		token = JsonToken::FIELD_NAME;
+		encodeString(field.c_str(), field.length());
+		output << ':';
+	}
+
+	void startObject() override {
+		prepareWriteValue();
+		token = JsonToken::START_OBJECT;
+		tagStack.push_back(token);
+		output << '{';
+	}
+
+	void endObject() override {
+		if (tagStack.empty() || tagStack.back() != JsonToken::START_OBJECT) {
+			throw JsonException(
+					"Tried to close an object while outside of an object");
+		}
+		token = JsonToken::END_OBJECT;
+		tagStack.pop_back();
+		output << '}';
+	}
+
+	void startArray() override {
+		prepareWriteValue();
+		token = JsonToken::START_ARRAY;
+		tagStack.push_back(token);
+		output << '[';
+	}
+
+	void endArray() override {
+		if (tagStack.empty() || tagStack.back() != JsonToken::START_ARRAY) {
+			throw JsonException(
+					"Tried to close an array while outside of an array");
+		}
+		token = JsonToken::END_ARRAY;
+		tagStack.pop_back();
+		output << ']';
+	}
+
+	void writeField(const std::string& field, double value) override {
+		writeFieldName(field);
+		write(value);
+	}
+
+	void writeField(const std::string& field, long value) override {
+		writeFieldName(field);
+		write(value);
+	}
+
+	void writeField(const std::string& field, bool value) override {
+		writeFieldName(field);
+		write(value);
+	}
+
+	void writeField(const std::string& field, std::nullptr_t null) override {
+		writeFieldName(field);
+		write(null);
+	}
+
+	void writeField(const std::string& field, const std::string& value)
+			override {
+		writeFieldName(field);
+		write(value);
+	}
+
+	void writeField(const std::string& field, const char* value) override {
+		writeFieldName(field);
+		write(value);
+	}
+};
 
 std::shared_ptr<JsonParser> JsonFactory::createJsonParser(
 		std::istream& inputStream) {
 	return std::make_shared<ConcreteJsonParser>(inputStream);
+}
+
+std::shared_ptr<JsonGenerator> JsonFactory::createJsonGenerator(
+		std::ostream& outputStream, bool prettyPrint) {
+	return std::make_shared<ConcreteJsonGenerator>(outputStream, prettyPrint);
 }
 
 }
