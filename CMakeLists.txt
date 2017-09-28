@@ -10,9 +10,17 @@ else()
 	set(CMAKE_CXX_STANDARD_REQUIRED ON)
 endif()
 
-add_executable(grank src/main.cpp src/jaxup.cpp)
-add_executable(uglify src/uglify.cpp src/jaxup.cpp)
+add_library(jaxup STATIC src/jaxup.cpp)
+set_target_properties(jaxup PROPERTIES PUBLIC_HEADER src/jaxup.h)
 
-install(TARGETS grank
-	RUNTIME DESTINATION bin)
+add_executable(grank src/main.cpp)
+target_link_libraries(grank jaxup)
+
+add_executable(uglify src/uglify.cpp)
+target_link_libraries(uglify jaxup)
+
+install(TARGETS jaxup
+	RUNTIME DESTINATION bin
+	ARCHIVE DESTINATION lib
+	PUBLIC_HEADER DESTINATION include)
 
