@@ -5,11 +5,11 @@
 
 using namespace jaxup;
 
-int streamingCopy(std::ifstream& inputFile, std::ofstream& outputFile) {
+int streamingCopy(std::ifstream& inputFile, std::ofstream& outputFile, bool prettify) {
 	JsonFactory factory;
 	std::shared_ptr<JsonParser> parser = factory.createJsonParser(inputFile);
 	std::shared_ptr<JsonGenerator> generator = factory.createJsonGenerator(
-			outputFile);
+			outputFile, prettify);
 	JsonToken token;
 	int i = 0;
 	while ((token = parser->nextToken()) != JsonToken::NOT_AVAILABLE) {
@@ -58,10 +58,14 @@ int main(int argc, char* argv[]) {
 	auto start = std::chrono::high_resolution_clock::now();
 	std::ifstream inputFile(argv[1]);
 	std::ofstream outputFile(argv[2]);
+	bool prettify = false;
+	if (argc > 3 && std::string("--prettify") == argv[3]) {
+		prettify = true;
+	}
 
 	int numTokens = 0;
 	try {
-		numTokens = streamingCopy(inputFile, outputFile);
+		numTokens = streamingCopy(inputFile, outputFile, prettify);
 	} catch (const JsonException& e) {
 		std::cerr << "Failed to uglify file: " << e.what() << std::endl;
 	}

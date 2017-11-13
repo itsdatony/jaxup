@@ -466,10 +466,10 @@ class ConcreteJsonGenerator: public JsonGenerator {
 private:
 	std::ostream& output;
 	JsonToken token = JsonToken::NOT_AVAILABLE;
-	int indentLevel = 0;
 	std::vector<JsonToken> tagStack;
-	char unicodeBuff[6] = { '\\', 'u', '0', '0', '0', '0' };
+	std::string prettyBuff = "\n";
 	bool prettyPrint;
+	char unicodeBuff[6] = { '\\', 'u', '0', '0', '0', '0' };
 
 	inline void prepareWriteValue() {
 		if (!tagStack.empty()) {
@@ -482,6 +482,9 @@ private:
 			if (parent == JsonToken::START_ARRAY
 					&& token != JsonToken::START_ARRAY) {
 				output << ',';
+			}
+			if (prettyPrint && parent == JsonToken::START_ARRAY) {
+				output << prettyBuff;
 			}
 		}
 	}
@@ -601,9 +604,16 @@ public:
 		if (token != JsonToken::START_OBJECT) {
 			output << ',';
 		}
+		if (prettyPrint) {
+			output << prettyBuff;
+		}
 		token = JsonToken::FIELD_NAME;
 		encodeString(field.c_str(), field.length());
-		output << ':';
+		if (!prettyPrint) {
+			output << ':';
+		} else {
+			output.write(" : ", 3);
+		}
 	}
 
 	void startObject() override {
@@ -611,6 +621,9 @@ public:
 		token = JsonToken::START_OBJECT;
 		tagStack.push_back(token);
 		output << '{';
+		if (prettyPrint) {
+			prettyBuff.push_back('\t');
+		}
 	}
 
 	void endObject() override {
@@ -620,6 +633,10 @@ public:
 		}
 		token = JsonToken::END_OBJECT;
 		tagStack.pop_back();
+		if (prettyPrint) {
+			prettyBuff.pop_back();
+			output << prettyBuff;
+		}
 		output << '}';
 	}
 
@@ -628,6 +645,9 @@ public:
 		token = JsonToken::START_ARRAY;
 		tagStack.push_back(token);
 		output << '[';
+		if (prettyPrint) {
+			prettyBuff.push_back('\t');
+		}
 	}
 
 	void endArray() override {
@@ -637,6 +657,10 @@ public:
 		}
 		token = JsonToken::END_ARRAY;
 		tagStack.pop_back();
+		if (prettyPrint) {
+			prettyBuff.pop_back();
+			output << prettyBuff;
+		}
 		output << ']';
 	}
 };
