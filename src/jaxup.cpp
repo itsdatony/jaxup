@@ -470,7 +470,8 @@ private:
 	std::vector<JsonToken> tagStack;
 	std::string prettyBuff = "\n";
 	bool prettyPrint;
-	char unicodeBuff[6] = { '\\', 'u', '0', '0', '0', '0' };
+	alignas(8) char unicodeBuff[6] = { '\\', 'u', '0', '0', '0', '0' };
+	alignas(8) char doubleBuff[36];
 
 	inline void prepareWriteValue() {
 		if (!tagStack.empty()) {
@@ -559,7 +560,14 @@ public:
 	void write(double value) override {
 		prepareWriteValue();
 		token = JsonToken::VALUE_NUMBER_FLOAT;
-		output << value;
+		int len = snprintf(doubleBuff, sizeof(doubleBuff), "%.16g", value);
+		if (len < 0) {
+			throw JsonException("Failed to serialize double");
+		}
+		if ((unsigned int) len > sizeof(doubleBuff)) {
+			len = sizeof(doubleBuff);
+		}
+		output.write(doubleBuff, len);
 	}
 
 	void write(long value) override {
