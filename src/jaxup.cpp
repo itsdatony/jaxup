@@ -26,7 +26,7 @@ private:
 
 public:
 	ConcreteJsonParser(std::istream& inputStream) :
-			input(inputStream), currentName(""), currentString("") {
+			currentName(""), currentString(""), input(inputStream) {
 		currentName.reserve(initialBuffSize);
 		currentString.reserve(initialBuffSize);
 		tagStack.reserve(32);
@@ -311,9 +311,10 @@ private:
 
 	JsonToken parsePositiveNumber(char c) {
 		if (c == '0') {
-			if (peekNextCharacter(&c) && c == '0') {
+			if (peekNextCharacter(&c) && isDigit(c)) {
 				throw JsonException("Leading zeroes are not allowed");
 			}
+			c = '0'; // Undo peek
 		}
 
 		this->doubleValue = getDoubleFromChar(c);
@@ -573,7 +574,7 @@ public:
 		output << value;
 	}
 
-	void write(std::nullptr_t null) override {
+	void write(std::nullptr_t) override {
 		prepareWriteValue();
 		token = JsonToken::VALUE_NULL;
 		output.write("null", 4);

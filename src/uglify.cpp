@@ -47,6 +47,8 @@ int streamingCopy(std::ifstream& inputFile, std::ofstream& outputFile, bool pret
 		case JsonToken::VALUE_TRUE:
 			generator->write(true);
 			break;
+		case JsonToken::NOT_AVAILABLE:
+			break;
 		}
 		++i;
 	}
