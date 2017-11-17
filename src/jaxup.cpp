@@ -5,7 +5,7 @@
 
 namespace jaxup {
 
-static const int initialBuffSize = 8196;
+static const unsigned int initialBuffSize = 8196;
 
 static inline double getDoubleFromChar(char c) {
 	static const double DIGITS[] = { 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0,
@@ -317,6 +317,7 @@ private:
 			}
 			c = '0'; // Undo peek
 		}
+		bool isFloatingPoint = false;
 
 		this->doubleValue = getDoubleFromChar(c);
 		while (peekNextCharacter(&c) && isDigit(c)) {
@@ -325,6 +326,8 @@ private:
 		}
 
 		if (c == '.') {
+			isFloatingPoint = true;
+
 			double fraction = 1.0;
 			while (advanceAndPeekNextCharacter(&c) && isDigit(c)) {
 				fraction *= 0.1;
@@ -333,6 +336,8 @@ private:
 		}
 
 		if (c == 'e' || c == 'E') {
+			isFloatingPoint = true;
+
 			++this->inputOffset;
 			peekNextCharacter(&c);
 
@@ -363,14 +368,18 @@ private:
 			}
 
 			this->doubleValue *= power;
-
 		}
 
 		if (c != 0 && !isDelimiter(c)) {
 			throw JsonException("Invalid JSON number");
 		}
 
-		return foundToken(JsonToken::VALUE_NUMBER_FLOAT);
+		if (isFloatingPoint) {
+			return foundToken(JsonToken::VALUE_NUMBER_FLOAT);
+		}
+
+		this->longValue = this->doubleValue;
+		return foundToken(JsonToken::VALUE_NUMBER_INT);
 	}
 
 	void skipPair(JsonToken start, JsonToken end) {
@@ -466,7 +475,7 @@ private:
 
 class ConcreteJsonGenerator: public JsonGenerator {
 private:
-	int outputSize = 0;
+	unsigned int outputSize = 0;
 	char outputBuffer[initialBuffSize];
 	std::ostream& output;
 	JsonToken token = JsonToken::NOT_AVAILABLE;
@@ -585,6 +594,28 @@ private:
 		writeBuff('"');
 	}
 
+	inline int writeDoubleToBuff(double value, char* buff, int size) {
+		int len = std::snprintf(buff, size, "%.16g", value);
+		if (len < 0) {
+			throw JsonException("Failed to serialize double");
+		}
+		if ((unsigned int) len > sizeof(doubleBuff)) {
+			len = sizeof(doubleBuff);
+		}
+		return len;
+	}
+
+	inline int writeLongToBuff(long value, char* buff, int size) {
+		int len = std::snprintf(buff, size, "%ld", value);
+		if (len < 0) {
+			throw JsonException("Failed to serialize long");
+		}
+		if ((unsigned int) len > sizeof(doubleBuff)) {
+			len = sizeof(doubleBuff);
+		}
+		return len;
+	}
+
 public:
 	ConcreteJsonGenerator(std::ostream& outputStream, bool prettyPrint) :
 			output(outputStream), prettyPrint(prettyPrint) {
@@ -598,27 +629,27 @@ public:
 	void write(double value) override {
 		prepareWriteValue();
 		token = JsonToken::VALUE_NUMBER_FLOAT;
-		int len = snprintf(doubleBuff, sizeof(doubleBuff), "%.16g", value);
-		if (len < 0) {
-			throw JsonException("Failed to serialize double");
+		if (sizeof(doubleBuff) <= initialBuffSize - outputSize) {
+			int len = writeDoubleToBuff(value, &outputBuffer[outputSize],
+					sizeof(doubleBuff));
+			outputSize += len;
+		} else {
+			int len = writeDoubleToBuff(value, doubleBuff, sizeof(doubleBuff));
+			writeBuff(doubleBuff, len);
 		}
-		if ((unsigned int) len > sizeof(doubleBuff)) {
-			len = sizeof(doubleBuff);
-		}
-		writeBuff(doubleBuff, len);
 	}
 
 	void write(long value) override {
 		prepareWriteValue();
 		token = JsonToken::VALUE_NUMBER_INT;
-		int len = snprintf(doubleBuff, sizeof(doubleBuff), "%ld", value);
-		if (len < 0) {
-			throw JsonException("Failed to serialize long");
+		if (sizeof(doubleBuff) <= initialBuffSize - outputSize) {
+			int len = writeLongToBuff(value, &outputBuffer[outputSize],
+					sizeof(doubleBuff));
+			outputSize += len;
+		} else {
+			int len = writeLongToBuff(value, doubleBuff, sizeof(doubleBuff));
+			writeBuff(doubleBuff, len);
 		}
-		if ((unsigned int) len > sizeof(doubleBuff)) {
-			len = sizeof(doubleBuff);
-		}
-		writeBuff(doubleBuff, len);
 	}
 
 	void write(bool value) override {
