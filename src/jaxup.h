@@ -51,6 +51,7 @@ public:
 class JsonGenerator {
 public:
 	virtual ~JsonGenerator() = default;
+	virtual void flush() = 0;
 	virtual void write(double value) = 0;
 	virtual void write(long value) = 0;
 	virtual void write(bool value) = 0;

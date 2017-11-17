@@ -1,10 +1,11 @@
 #include "jaxup.h"
 
+#include <cstring>
 #include <vector>
 
 namespace jaxup {
 
-static const int initialBuffSize = 4096;
+static const int initialBuffSize = 8196;
 
 static inline double getDoubleFromChar(char c) {
 	static const double DIGITS[] = { 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0,
@@ -465,6 +466,8 @@ private:
 
 class ConcreteJsonGenerator: public JsonGenerator {
 private:
+	int outputSize = 0;
+	char outputBuffer[initialBuffSize];
 	std::ostream& output;
 	JsonToken token = JsonToken::NOT_AVAILABLE;
 	std::vector<JsonToken> tagStack;
@@ -472,6 +475,39 @@ private:
 	bool prettyPrint;
 	alignas(8) char unicodeBuff[6] = { '\\', 'u', '0', '0', '0', '0' };
 	alignas(8) char doubleBuff[36];
+
+	void flush() override {
+		if (outputSize > 0) {
+			output.write(outputBuffer, outputSize);
+			outputSize = 0;
+		}
+	}
+
+	inline void writeBuff(char c) {
+		if (outputSize >= initialBuffSize) {
+			flush();
+		}
+		outputBuffer[outputSize++] = c;
+	}
+
+	inline void writeBuff(const char* c, unsigned long length) {
+		if (outputSize + length <= initialBuffSize) {
+			std::memcpy(&outputBuffer[outputSize], c, length);
+			outputSize += length;
+		} else {
+			long first = initialBuffSize - outputSize;
+			std::memcpy(&outputBuffer[outputSize], c, first);
+			outputSize = initialBuffSize;
+			flush();
+			length -= first;
+			std::memcpy(outputBuffer, c + first, length);
+			outputSize += length;
+		}
+	}
+
+	inline void writePrettyBuff() {
+		writeBuff(prettyBuff.c_str(), prettyBuff.length());
+	}
 
 	inline void prepareWriteValue() {
 		if (!tagStack.empty()) {
@@ -483,16 +519,16 @@ private:
 			}
 			if (parent == JsonToken::START_ARRAY
 					&& token != JsonToken::START_ARRAY) {
-				output << ',';
+				writeBuff(',');
 			}
 			if (prettyPrint && parent == JsonToken::START_ARRAY) {
-				output << prettyBuff;
+				writePrettyBuff();
 			}
 		}
 	}
 
 	inline void encodeString(const char* value, long length = -1) {
-		output << '"';
+		writeBuff('"');
 		long run = 0;
 		long runStart = -1;
 		for (long i = 0; value[i] != 0 || i < length; ++i) {
@@ -505,32 +541,32 @@ private:
 				continue;
 			}
 			if (run > 0) {
-				output.write(&value[runStart], run);
+				writeBuff(&value[runStart], run);
 				run = 0;
 				runStart = -1;
 			}
 
 			switch (c) {
 			case '"':
-				output.write("\\\"", 2);
+				writeBuff("\\\"", 2);
 				break;
 			case '\\':
-				output.write("\\\\", 2);
+				writeBuff("\\\\", 2);
 				break;
 			case '\b':
-				output.write("\\b", 2);
+				writeBuff("\\b", 2);
 				break;
 			case '\f':
-				output.write("\\f", 2);
+				writeBuff("\\f", 2);
 				break;
 			case '\n':
-				output.write("\\n", 2);
+				writeBuff("\\n", 2);
 				break;
 			case '\r':
-				output.write("\\r", 2);
+				writeBuff("\\r", 2);
 				break;
 			case '\t':
-				output.write("\\t", 2);
+				writeBuff("\\t", 2);
 				break;
 			default:
 				unicodeBuff[4] = (c >> 4) + '0'; // '0' or '1'
@@ -540,13 +576,13 @@ private:
 				} else {
 					unicodeBuff[5] = c - 10 + 'A';
 				}
-				output.write(unicodeBuff, 6);
+				writeBuff(unicodeBuff, 6);
 			}
 		}
 		if (run > 0) {
-			output.write(&value[runStart], run);
+			writeBuff(&value[runStart], run);
 		}
-		output << '"';
+		writeBuff('"');
 	}
 
 public:
@@ -555,7 +591,9 @@ public:
 		tagStack.reserve(32);
 	}
 
-	virtual ~ConcreteJsonGenerator() = default;
+	virtual ~ConcreteJsonGenerator() {
+		flush();
+	}
 
 	void write(double value) override {
 		prepareWriteValue();
@@ -567,32 +605,44 @@ public:
 		if ((unsigned int) len > sizeof(doubleBuff)) {
 			len = sizeof(doubleBuff);
 		}
-		output.write(doubleBuff, len);
+		writeBuff(doubleBuff, len);
 	}
 
 	void write(long value) override {
 		prepareWriteValue();
 		token = JsonToken::VALUE_NUMBER_INT;
-		output << value;
+		int len = snprintf(doubleBuff, sizeof(doubleBuff), "%ld", value);
+		if (len < 0) {
+			throw JsonException("Failed to serialize long");
+		}
+		if ((unsigned int) len > sizeof(doubleBuff)) {
+			len = sizeof(doubleBuff);
+		}
+		writeBuff(doubleBuff, len);
 	}
 
 	void write(bool value) override {
 		prepareWriteValue();
-		token = value ? JsonToken::VALUE_TRUE : JsonToken::VALUE_FALSE;
-		output << value;
+		if (value) {
+			token = JsonToken::VALUE_TRUE;
+			writeBuff("true", 4);
+		} else {
+			token = JsonToken::VALUE_FALSE;
+			writeBuff("false", 5);
+		}
 	}
 
 	void write(std::nullptr_t) override {
 		prepareWriteValue();
 		token = JsonToken::VALUE_NULL;
-		output.write("null", 4);
+		writeBuff("null", 4);
 	}
 
 	void write(const char* value) override {
 		prepareWriteValue();
 		if (value == nullptr) {
 			token = JsonToken::VALUE_NULL;
-			output.write("null", 4);
+			writeBuff("null", 4);
 			return;
 		}
 		token = JsonToken::VALUE_STRING;
@@ -611,17 +661,17 @@ public:
 					"Tried to write a field name outside of an object");
 		}
 		if (token != JsonToken::START_OBJECT) {
-			output << ',';
+			writeBuff(',');
 		}
 		if (prettyPrint) {
-			output << prettyBuff;
+			writePrettyBuff();
 		}
 		token = JsonToken::FIELD_NAME;
 		encodeString(field.c_str(), field.length());
 		if (!prettyPrint) {
-			output << ':';
+			writeBuff(':');
 		} else {
-			output.write(" : ", 3);
+			writeBuff(" : ", 3);
 		}
 	}
 
@@ -629,7 +679,7 @@ public:
 		prepareWriteValue();
 		token = JsonToken::START_OBJECT;
 		tagStack.push_back(token);
-		output << '{';
+		writeBuff('{');
 		if (prettyPrint) {
 			prettyBuff.push_back('\t');
 		}
@@ -644,16 +694,16 @@ public:
 		tagStack.pop_back();
 		if (prettyPrint) {
 			prettyBuff.pop_back();
-			output << prettyBuff;
+			writePrettyBuff();
 		}
-		output << '}';
+		writeBuff('}');
 	}
 
 	void startArray() override {
 		prepareWriteValue();
 		token = JsonToken::START_ARRAY;
 		tagStack.push_back(token);
-		output << '[';
+		writeBuff('[');
 		if (prettyPrint) {
 			prettyBuff.push_back('\t');
 		}
@@ -668,9 +718,9 @@ public:
 		tagStack.pop_back();
 		if (prettyPrint) {
 			prettyBuff.pop_back();
-			output << prettyBuff;
+			writePrettyBuff();
 		}
-		output << ']';
+		writeBuff(']');
 	}
 };
 

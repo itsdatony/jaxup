@@ -19,7 +19,7 @@ int main(int /*argc*/, char* argv[]) {
 			++i;
 		}
 	} catch (const JsonException& e) {
-		std::cerr << "Failed to uglify file: " << e.what() << std::endl;
+		std::cerr << "Failed to parse file: " << e.what() << std::endl;
 	}
 
 	auto end = std::chrono::high_resolution_clock::now();
