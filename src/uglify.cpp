@@ -1,7 +1,7 @@
 #include <iostream>
 #include <chrono>
 #include <fstream>
-#include "jaxup.h"
+#include <jaxup.h>
 
 using namespace jaxup;
 

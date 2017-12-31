@@ -11,8 +11,8 @@ else()
 	set(CMAKE_CXX_STANDARD_REQUIRED ON)
 endif()
 
-add_library(jaxup STATIC src/jaxup.cpp)
-set_target_properties(jaxup PROPERTIES PUBLIC_HEADER src/jaxup.h)
+add_library(jaxup INTERFACE)
+target_include_directories(jaxup INTERFACE include/)
 
 add_executable(grank src/main.cpp)
 target_link_libraries(grank jaxup)

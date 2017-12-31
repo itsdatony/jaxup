@@ -1,11 +1,12 @@
-#include "jaxup.h"
+#ifndef JAXUP_PARSER_H
+#define JAXUP_PARSER_H
 
-#include <cstring>
+#include <iostream>
 #include <vector>
 
-namespace jaxup {
+#include "jaxup_common.h"
 
-static const unsigned int initialBuffSize = 8196;
+namespace jaxup {
 
 static inline double getDoubleFromChar(char c) {
 	static const double DIGITS[] = { 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0,
@@ -13,7 +14,7 @@ static inline double getDoubleFromChar(char c) {
 	return DIGITS[c - '0'];
 }
 
-class ConcreteJsonParser: public JsonParser {
+class JsonParser {
 private:
 	long longValue = 0;
 	JsonToken token = JsonToken::NOT_AVAILABLE;
@@ -26,23 +27,23 @@ private:
 	std::istream& input;
 
 public:
-	ConcreteJsonParser(std::istream& inputStream) :
+	JsonParser(std::istream& inputStream) :
 			currentName(""), currentString(""), input(inputStream) {
 		currentName.reserve(initialBuffSize);
 		currentString.reserve(initialBuffSize);
 		tagStack.reserve(32);
 	}
-	virtual ~ConcreteJsonParser() = default;
+	~JsonParser() = default;
 
-	JsonToken currentToken() override {
+	JsonToken currentToken()  {
 		return this->token;
 	}
 
-	const std::string& getCurrentName() override {
+	const std::string& getCurrentName() {
 		return this->currentName;
 	}
 
-	long getLongValue() override {
+	long getLongValue() {
 		if (this->token == JsonToken::VALUE_NUMBER_INT) {
 			return this->longValue;
 		} else if (this->token == JsonToken::VALUE_NUMBER_FLOAT) {
@@ -52,7 +53,7 @@ public:
 		throw JsonException("Invalid type");
 	}
 
-	double getDoubleValue() override {
+	double getDoubleValue() {
 		if (this->token == JsonToken::VALUE_NUMBER_FLOAT) {
 			return this->doubleValue;
 		} else if (this->token == JsonToken::VALUE_NUMBER_INT) {
@@ -62,7 +63,7 @@ public:
 		throw JsonException("Invalid type");
 	}
 
-	bool getBooleanValue() override {
+	bool getBooleanValue() {
 		if (this->token == JsonToken::VALUE_TRUE) {
 			return true;
 		} else if (this->token == JsonToken::VALUE_FALSE) {
@@ -72,17 +73,17 @@ public:
 		throw JsonException("Invalid type");
 	}
 
-	const std::string& getText() override {
+	const std::string& getText() {
 		return this->currentString;
 	}
 
-	JsonToken nextValue() override {
+	JsonToken nextValue() {
 		while (this->nextToken() == JsonToken::FIELD_NAME)
 			;
 		return this->token;
 	}
 
-	JsonParser& skipChildren() override {
+	JsonParser& skipChildren() {
 		if (this->token == JsonToken::START_OBJECT) {
 			skipPair(JsonToken::START_OBJECT, JsonToken::END_OBJECT);
 		} else if (this->token == JsonToken::START_ARRAY) {
@@ -91,7 +92,7 @@ public:
 		return *this;
 	}
 
-	JsonToken nextToken() override {
+	JsonToken nextToken() {
 		char c;
 		if (this->token == JsonToken::FIELD_NAME) {
 			getNextSignificantCharacter(&c);
@@ -473,296 +474,6 @@ private:
 	}
 };
 
-class ConcreteJsonGenerator: public JsonGenerator {
-private:
-	unsigned int outputSize = 0;
-	char outputBuffer[initialBuffSize];
-	std::ostream& output;
-	JsonToken token = JsonToken::NOT_AVAILABLE;
-	std::vector<JsonToken> tagStack;
-	std::string prettyBuff = "\n";
-	bool prettyPrint;
-	alignas(8) char unicodeBuff[6] = { '\\', 'u', '0', '0', '0', '0' };
-	alignas(8) char doubleBuff[36];
-
-	void flush() override {
-		if (outputSize > 0) {
-			output.write(outputBuffer, outputSize);
-			outputSize = 0;
-		}
-	}
-
-	inline void writeBuff(char c) {
-		if (outputSize >= initialBuffSize) {
-			flush();
-		}
-		outputBuffer[outputSize++] = c;
-	}
-
-	inline void writeBuff(const char* c, unsigned long length) {
-		if (outputSize + length <= initialBuffSize) {
-			std::memcpy(&outputBuffer[outputSize], c, length);
-			outputSize += length;
-		} else {
-			long first = initialBuffSize - outputSize;
-			std::memcpy(&outputBuffer[outputSize], c, first);
-			outputSize = initialBuffSize;
-			flush();
-			length -= first;
-			std::memcpy(outputBuffer, c + first, length);
-			outputSize += length;
-		}
-	}
-
-	inline void writePrettyBuff() {
-		writeBuff(prettyBuff.c_str(), prettyBuff.length());
-	}
-
-	inline void prepareWriteValue() {
-		if (!tagStack.empty()) {
-			JsonToken parent = tagStack.back();
-			if (parent == JsonToken::START_OBJECT
-					&& token != JsonToken::FIELD_NAME) {
-				throw JsonException(
-						"Tried to write a value without giving it a field name");
-			}
-			if (parent == JsonToken::START_ARRAY
-					&& token != JsonToken::START_ARRAY) {
-				writeBuff(',');
-			}
-			if (prettyPrint && parent == JsonToken::START_ARRAY) {
-				writePrettyBuff();
-			}
-		}
-	}
-
-	inline void encodeString(const char* value, long length = -1) {
-		writeBuff('"');
-		long run = 0;
-		long runStart = -1;
-		for (long i = 0; value[i] != 0 || i < length; ++i) {
-			char c = value[i];
-			if ((c >= ' ' || c < 0) && c != '"' && c != '\\') {
-				if (runStart < 0) {
-					runStart = i;
-				}
-				++run;
-				continue;
-			}
-			if (run > 0) {
-				writeBuff(&value[runStart], run);
-				run = 0;
-				runStart = -1;
-			}
-
-			switch (c) {
-			case '"':
-				writeBuff("\\\"", 2);
-				break;
-			case '\\':
-				writeBuff("\\\\", 2);
-				break;
-			case '\b':
-				writeBuff("\\b", 2);
-				break;
-			case '\f':
-				writeBuff("\\f", 2);
-				break;
-			case '\n':
-				writeBuff("\\n", 2);
-				break;
-			case '\r':
-				writeBuff("\\r", 2);
-				break;
-			case '\t':
-				writeBuff("\\t", 2);
-				break;
-			default:
-				unicodeBuff[4] = (c >> 4) + '0'; // '0' or '1'
-				c = c & 0xF;
-				if (c < 10) {
-					unicodeBuff[5] = c + '0';
-				} else {
-					unicodeBuff[5] = c - 10 + 'A';
-				}
-				writeBuff(unicodeBuff, 6);
-			}
-		}
-		if (run > 0) {
-			writeBuff(&value[runStart], run);
-		}
-		writeBuff('"');
-	}
-
-	inline int writeDoubleToBuff(double value, char* buff, int size) {
-		int len = std::snprintf(buff, size, "%.16g", value);
-		if (len < 0) {
-			throw JsonException("Failed to serialize double");
-		}
-		if ((unsigned int) len > sizeof(doubleBuff)) {
-			len = sizeof(doubleBuff);
-		}
-		return len;
-	}
-
-	inline int writeLongToBuff(long value, char* buff, int size) {
-		int len = std::snprintf(buff, size, "%ld", value);
-		if (len < 0) {
-			throw JsonException("Failed to serialize long");
-		}
-		if ((unsigned int) len > sizeof(doubleBuff)) {
-			len = sizeof(doubleBuff);
-		}
-		return len;
-	}
-
-public:
-	ConcreteJsonGenerator(std::ostream& outputStream, bool prettyPrint) :
-			output(outputStream), prettyPrint(prettyPrint) {
-		tagStack.reserve(32);
-	}
-
-	virtual ~ConcreteJsonGenerator() {
-		flush();
-	}
-
-	void write(double value) override {
-		prepareWriteValue();
-		token = JsonToken::VALUE_NUMBER_FLOAT;
-		if (sizeof(doubleBuff) <= initialBuffSize - outputSize) {
-			int len = writeDoubleToBuff(value, &outputBuffer[outputSize],
-					sizeof(doubleBuff));
-			outputSize += len;
-		} else {
-			int len = writeDoubleToBuff(value, doubleBuff, sizeof(doubleBuff));
-			writeBuff(doubleBuff, len);
-		}
-	}
-
-	void write(long value) override {
-		prepareWriteValue();
-		token = JsonToken::VALUE_NUMBER_INT;
-		if (sizeof(doubleBuff) <= initialBuffSize - outputSize) {
-			int len = writeLongToBuff(value, &outputBuffer[outputSize],
-					sizeof(doubleBuff));
-			outputSize += len;
-		} else {
-			int len = writeLongToBuff(value, doubleBuff, sizeof(doubleBuff));
-			writeBuff(doubleBuff, len);
-		}
-	}
-
-	void write(bool value) override {
-		prepareWriteValue();
-		if (value) {
-			token = JsonToken::VALUE_TRUE;
-			writeBuff("true", 4);
-		} else {
-			token = JsonToken::VALUE_FALSE;
-			writeBuff("false", 5);
-		}
-	}
-
-	void write(std::nullptr_t) override {
-		prepareWriteValue();
-		token = JsonToken::VALUE_NULL;
-		writeBuff("null", 4);
-	}
-
-	void write(const char* value) override {
-		prepareWriteValue();
-		if (value == nullptr) {
-			token = JsonToken::VALUE_NULL;
-			writeBuff("null", 4);
-			return;
-		}
-		token = JsonToken::VALUE_STRING;
-		encodeString(value);
-	}
-
-	void write(const std::string& value) override {
-		prepareWriteValue();
-		token = JsonToken::VALUE_STRING;
-		encodeString(value.c_str(), value.length());
-	}
-
-	void writeFieldName(const std::string& field) override {
-		if (tagStack.empty() || tagStack.back() != JsonToken::START_OBJECT) {
-			throw JsonException(
-					"Tried to write a field name outside of an object");
-		}
-		if (token != JsonToken::START_OBJECT) {
-			writeBuff(',');
-		}
-		if (prettyPrint) {
-			writePrettyBuff();
-		}
-		token = JsonToken::FIELD_NAME;
-		encodeString(field.c_str(), field.length());
-		if (!prettyPrint) {
-			writeBuff(':');
-		} else {
-			writeBuff(" : ", 3);
-		}
-	}
-
-	void startObject() override {
-		prepareWriteValue();
-		token = JsonToken::START_OBJECT;
-		tagStack.push_back(token);
-		writeBuff('{');
-		if (prettyPrint) {
-			prettyBuff.push_back('\t');
-		}
-	}
-
-	void endObject() override {
-		if (tagStack.empty() || tagStack.back() != JsonToken::START_OBJECT) {
-			throw JsonException(
-					"Tried to close an object while outside of an object");
-		}
-		token = JsonToken::END_OBJECT;
-		tagStack.pop_back();
-		if (prettyPrint) {
-			prettyBuff.pop_back();
-			writePrettyBuff();
-		}
-		writeBuff('}');
-	}
-
-	void startArray() override {
-		prepareWriteValue();
-		token = JsonToken::START_ARRAY;
-		tagStack.push_back(token);
-		writeBuff('[');
-		if (prettyPrint) {
-			prettyBuff.push_back('\t');
-		}
-	}
-
-	void endArray() override {
-		if (tagStack.empty() || tagStack.back() != JsonToken::START_ARRAY) {
-			throw JsonException(
-					"Tried to close an array while outside of an array");
-		}
-		token = JsonToken::END_ARRAY;
-		tagStack.pop_back();
-		if (prettyPrint) {
-			prettyBuff.pop_back();
-			writePrettyBuff();
-		}
-		writeBuff(']');
-	}
 };
 
-std::shared_ptr<JsonParser> JsonFactory::createJsonParser(
-		std::istream& inputStream) {
-	return std::make_shared<ConcreteJsonParser>(inputStream);
-}
-
-std::shared_ptr<JsonGenerator> JsonFactory::createJsonGenerator(
-		std::ostream& outputStream, bool prettyPrint) {
-	return std::make_shared<ConcreteJsonGenerator>(outputStream, prettyPrint);
-}
-
-}
+#endif
