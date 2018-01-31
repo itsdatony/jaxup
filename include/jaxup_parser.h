@@ -8,9 +8,53 @@
 
 namespace jaxup {
 
+//template <class source, size_t size>
+//class JsonSource {
+//public:
+//	JsonSource(source& input) : input(&input) {
+//	}
+//	int inputOffset = 0;
+//	int inputSize = 0;
+//	char inputBuffer[size];
+//	void reset(source& newSource) {
+//		this->inputOffset = 0;
+//		this->inputSize = 0;
+//		this->input = &newSource;
+//	}
+//	bool loadMore() {
+//		return false;
+//	}
+//
+//private:
+//	source* input;
+//};
+//
+//template <size_t size>
+//class JsonSource<std::istream, size> {
+//public:
+//	//	JsonSource(std::istream& input) :
+//	//			input(&input) {
+//	//	}
+//	//	int inputOffset = 0;
+//	//	int inputSize = 0;
+//	//	char inputBuffer[size];
+//	bool loadMore() {
+//		this->inputOffset = 0;
+//		if (this->input->eof()) {
+//			return false;
+//		}
+//		this->input->read(&this->inputBuffer[0], size);
+//		this->inputSize = this->input->gcount();
+//		return this->inputSize > 0;
+//	}
+//
+//private:
+//	std::istream* input;
+//};
+
 static inline double getDoubleFromChar(char c) {
-	static const double DIGITS[] = { 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0,
-			8.0, 9.0 };
+	static const double DIGITS[] = {0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0,
+									8.0, 9.0};
 	return DIGITS[c - '0'];
 }
 
@@ -27,15 +71,14 @@ private:
 	std::istream& input;
 
 public:
-	JsonParser(std::istream& inputStream) :
-			currentName(""), currentString(""), input(inputStream) {
+	JsonParser(std::istream& inputStream) : currentName(""), currentString(""), input(inputStream) {
 		currentName.reserve(initialBuffSize);
 		currentString.reserve(initialBuffSize);
 		tagStack.reserve(32);
 	}
 	~JsonParser() = default;
 
-	JsonToken currentToken()  {
+	JsonToken currentToken() {
 		return this->token;
 	}
 
@@ -47,7 +90,7 @@ public:
 		if (this->token == JsonToken::VALUE_NUMBER_INT) {
 			return this->longValue;
 		} else if (this->token == JsonToken::VALUE_NUMBER_FLOAT) {
-			return (long) this->doubleValue;
+			return (long)this->doubleValue;
 		}
 		//TODO:
 		throw JsonException("Invalid type");
@@ -57,7 +100,7 @@ public:
 		if (this->token == JsonToken::VALUE_NUMBER_FLOAT) {
 			return this->doubleValue;
 		} else if (this->token == JsonToken::VALUE_NUMBER_INT) {
-			return (double) this->longValue;
+			return (double)this->longValue;
 		}
 		//TODO:
 		throw JsonException("Invalid type");
@@ -99,9 +142,7 @@ public:
 			if (c != ':') {
 				throw JsonException("Expected a colon, but none was found");
 			}
-		} else if (!this->tagStack.empty()
-				&& this->token != JsonToken::START_ARRAY
-				&& this->token != JsonToken::START_OBJECT) {
+		} else if (!this->tagStack.empty() && this->token != JsonToken::START_ARRAY && this->token != JsonToken::START_OBJECT) {
 			// Expect a comma or a close array/object
 			getNextSignificantCharacter(&c);
 			switch (c) {
@@ -113,12 +154,11 @@ public:
 				break;
 			default:
 				throw JsonException(
-						"Expected a comma before the next value, but none was found");
+					"Expected a comma before the next value, but none was found");
 			}
 		}
 
-		if (this->token != JsonToken::FIELD_NAME && !this->tagStack.empty()
-				&& this->tagStack.back() == JsonToken::START_OBJECT) {
+		if (this->token != JsonToken::FIELD_NAME && !this->tagStack.empty() && this->tagStack.back() == JsonToken::START_OBJECT) {
 			// Expect a field name next
 			getNextSignificantCharacter(&c);
 			if (c != '"') {
@@ -179,6 +219,7 @@ public:
 		}
 		return foundToken(JsonToken::NOT_AVAILABLE);
 	}
+
 private:
 	void parseString(std::string& buff) {
 		buff.clear();
@@ -238,21 +279,21 @@ private:
 				case 'u':
 					code = parseHexcode();
 					if (code < 0x80) {
-						buff.push_back((char) code);
+						buff.push_back((char)code);
 					} else if (code < 0x800) {
-						buff.push_back(0xC0 | (char) (code >> 6));
-						buff.push_back(0x80 | (char) (code & 0x3F));
+						buff.push_back(0xC0 | (char)(code >> 6));
+						buff.push_back(0x80 | (char)(code & 0x3F));
 					} else {
-						buff.push_back(0xE0 | (char) (code >> 12));
-						buff.push_back(0x80 | (char) ((code >> 6) & 0x3F));
-						buff.push_back(0x80 | (char) (code & 0x3F));
+						buff.push_back(0xE0 | (char)(code >> 12));
+						buff.push_back(0x80 | (char)((code >> 6) & 0x3F));
+						buff.push_back(0x80 | (char)(code & 0x3F));
 					}
 					break;
 				default:
 					throw JsonException("Invalid escape code");
 				}
 			} else {
-				std::cerr << "Unexpected value " << (int) c << std::endl;
+				std::cerr << "Unexpected value " << (int)c << std::endl;
 				throw JsonException("Unescaped control character");
 			}
 		}
@@ -391,6 +432,8 @@ private:
 				++count;
 			} else if (t == end) {
 				--count;
+			} else if (t == JsonToken::NOT_AVAILABLE) {
+				break;
 			}
 		}
 	}
@@ -451,8 +494,7 @@ private:
 	}
 
 	static inline bool isDelimiter(char c) {
-		return c == ',' || c == ':' || c == ']' || c == '}'
-				|| isInsignificantWhitespace(c);
+		return c == ',' || c == ':' || c == ']' || c == '}' || isInsignificantWhitespace(c);
 	}
 
 	inline bool nextIsDelimiter() {
@@ -473,7 +515,6 @@ private:
 		return nextIsDelimiter();
 	}
 };
-
-};
+}
 
 #endif

@@ -18,7 +18,7 @@ private:
 	std::vector<JsonToken> tagStack;
 	std::string prettyBuff = "\n";
 	bool prettyPrint;
-	alignas(8) char unicodeBuff[6] = { '\\', 'u', '0', '0', '0', '0' };
+	alignas(8) char unicodeBuff[6] = {'\\', 'u', '0', '0', '0', '0'};
 	alignas(8) char doubleBuff[36];
 
 	void flush() {
@@ -57,13 +57,10 @@ private:
 	inline void prepareWriteValue() {
 		if (!tagStack.empty()) {
 			JsonToken parent = tagStack.back();
-			if (parent == JsonToken::START_OBJECT
-					&& token != JsonToken::FIELD_NAME) {
-				throw JsonException(
-						"Tried to write a value without giving it a field name");
+			if (parent == JsonToken::START_OBJECT && token != JsonToken::FIELD_NAME) {
+				throw JsonException("Tried to write a value without giving it a field name");
 			}
-			if (parent == JsonToken::START_ARRAY
-					&& token != JsonToken::START_ARRAY) {
+			if (parent == JsonToken::START_ARRAY && token != JsonToken::START_ARRAY) {
 				writeBuff(',');
 			}
 			if (prettyPrint && parent == JsonToken::START_ARRAY) {
@@ -135,7 +132,7 @@ private:
 		if (len < 0) {
 			throw JsonException("Failed to serialize double");
 		}
-		if ((unsigned int) len > sizeof(doubleBuff)) {
+		if ((unsigned int)len > sizeof(doubleBuff)) {
 			len = sizeof(doubleBuff);
 		}
 		return len;
@@ -146,15 +143,14 @@ private:
 		if (len < 0) {
 			throw JsonException("Failed to serialize long");
 		}
-		if ((unsigned int) len > sizeof(doubleBuff)) {
+		if ((unsigned int)len > sizeof(doubleBuff)) {
 			len = sizeof(doubleBuff);
 		}
 		return len;
 	}
 
 public:
-	JsonGenerator(std::ostream& outputStream, bool prettyPrint) :
-			output(outputStream), prettyPrint(prettyPrint) {
+	JsonGenerator(std::ostream& outputStream, bool prettyPrint) : output(outputStream), prettyPrint(prettyPrint) {
 		tagStack.reserve(32);
 	}
 
@@ -166,8 +162,7 @@ public:
 		prepareWriteValue();
 		token = JsonToken::VALUE_NUMBER_FLOAT;
 		if (sizeof(doubleBuff) <= initialBuffSize - outputSize) {
-			int len = writeDoubleToBuff(value, &outputBuffer[outputSize],
-					sizeof(doubleBuff));
+			int len = writeDoubleToBuff(value, &outputBuffer[outputSize], sizeof(doubleBuff));
 			outputSize += len;
 		} else {
 			int len = writeDoubleToBuff(value, doubleBuff, sizeof(doubleBuff));
@@ -179,8 +174,7 @@ public:
 		prepareWriteValue();
 		token = JsonToken::VALUE_NUMBER_INT;
 		if (sizeof(doubleBuff) <= initialBuffSize - outputSize) {
-			int len = writeLongToBuff(value, &outputBuffer[outputSize],
-					sizeof(doubleBuff));
+			int len = writeLongToBuff(value, &outputBuffer[outputSize], sizeof(doubleBuff));
 			outputSize += len;
 		} else {
 			int len = writeLongToBuff(value, doubleBuff, sizeof(doubleBuff));
@@ -224,8 +218,7 @@ public:
 
 	void writeFieldName(const std::string& field) {
 		if (tagStack.empty() || tagStack.back() != JsonToken::START_OBJECT) {
-			throw JsonException(
-					"Tried to write a field name outside of an object");
+			throw JsonException("Tried to write a field name outside of an object");
 		}
 		if (token != JsonToken::START_OBJECT) {
 			writeBuff(',');
@@ -254,8 +247,7 @@ public:
 
 	void endObject() {
 		if (tagStack.empty() || tagStack.back() != JsonToken::START_OBJECT) {
-			throw JsonException(
-					"Tried to close an object while outside of an object");
+			throw JsonException("Tried to close an object while outside of an object");
 		}
 		token = JsonToken::END_OBJECT;
 		tagStack.pop_back();
@@ -278,8 +270,7 @@ public:
 
 	void endArray() {
 		if (tagStack.empty() || tagStack.back() != JsonToken::START_ARRAY) {
-			throw JsonException(
-					"Tried to close an array while outside of an array");
+			throw JsonException("Tried to close an array while outside of an array");
 		}
 		token = JsonToken::END_ARRAY;
 		tagStack.pop_back();
@@ -290,13 +281,12 @@ public:
 		writeBuff(']');
 	}
 
-	template<class T> inline void writeField(const std::string& field,
-			T value) {
+	template <class T>
+	inline void writeField(const std::string& field, T value) {
 		writeFieldName(field);
 		write(value);
 	}
 };
-
 }
 
 #endif

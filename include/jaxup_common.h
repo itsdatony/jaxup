@@ -22,18 +22,17 @@ enum class JsonToken {
 	VALUE_NULL
 };
 
-class JsonException: public std::exception {
+class JsonException : public std::exception {
 public:
-	JsonException(const char* what) :
-			text(what) {
+	JsonException(const char* what) : text(what) {
 	}
 	const char* what() const noexcept override {
 		return text;
 	}
+
 private:
 	const char* text;
 };
-
 }
 
 #endif
