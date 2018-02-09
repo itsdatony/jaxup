@@ -20,6 +20,9 @@ target_link_libraries(grank jaxup)
 add_executable(uglify src/uglify.cpp)
 target_link_libraries(uglify jaxup)
 
+add_executable(doubleWriter src/doubleWriter.cpp)
+target_link_libraries(doubleWriter jaxup)
+
 install(TARGETS jaxup
 	RUNTIME DESTINATION bin
 	ARCHIVE DESTINATION lib

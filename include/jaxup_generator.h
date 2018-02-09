@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "jaxup_common.h"
+#include "jaxup_grisu.h"
 
 namespace jaxup {
 
@@ -127,8 +128,9 @@ private:
 		writeBuff('"');
 	}
 
-	inline int writeDoubleToBuff(double value, char* buff, int size) {
-		int len = std::snprintf(buff, size, "%.16g", value);
+	inline int writeDoubleToBuff(double value, char* buff, int /*size*/) {
+		//int len = std::snprintf(buff, size, "%.16g", value);
+		int len = grisu::fastDoubleToString(buff, value);
 		if (len < 0) {
 			throw JsonException("Failed to serialize double");
 		}
