@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "jaxup_common.h"
+#include "jaxup_grisu.h"
 
 namespace jaxup {
 
@@ -56,6 +57,10 @@ static inline double getDoubleFromChar(char c) {
 	static const double DIGITS[] = {0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0,
 									8.0, 9.0};
 	return DIGITS[c - '0'];
+}
+
+static inline int getIntFromChar(char c) {
+	return c - '0';
 }
 
 class JsonParser {
@@ -353,41 +358,74 @@ private:
 	}
 
 	JsonToken parsePositiveNumber(char c) {
+		static const uint64_t bigLong = (uint64_t)std::numeric_limits<long>::max() / 10;
 		if (c == '0') {
 			if (peekNextCharacter(&c) && isDigit(c)) {
 				throw JsonException("Leading zeroes are not allowed");
 			}
 			c = '0'; // Undo peek
 		}
-		bool isFloatingPoint = false;
 
-		this->doubleValue = getDoubleFromChar(c);
+		bool rounded = false;
+		uint64_t significand = getIntFromChar(c);
+		int digitCount = 0, decimalExponent = 0;
 		while (peekNextCharacter(&c) && isDigit(c)) {
-			this->doubleValue = this->doubleValue * 10.0 + getDoubleFromChar(c);
+			if (significand >= bigLong) {
+				if (significand != bigLong || c > '8') {
+					rounded = true;
+					if (c > '5' || (c == '5' && (significand & 1))) {
+						++significand;
+					}
+					break;
+				}
+			}
+			significand = significand * 10 + getIntFromChar(c);
+			if (significand > 0) {
+				++digitCount;
+			}
 			++this->inputOffset;
+		}
+		if (rounded && isDigit(c)) {
+			// Eat remaining digits
+			while (advanceAndPeekNextCharacter(&c) && isDigit(c))
+				;
 		}
 
 		if (c == '.') {
-			isFloatingPoint = true;
-
-			double fraction = 1.0;
-			while (advanceAndPeekNextCharacter(&c) && isDigit(c)) {
-				fraction *= 0.1;
-				this->doubleValue += getDoubleFromChar(c) * fraction;
+			if (!rounded) {
+				while (advanceAndPeekNextCharacter(&c) && isDigit(c)) {
+					if (significand >= bigLong) {
+						if (significand != bigLong || c > '8') {
+							rounded = true;
+							if (c > '5' || (c == '5' && (significand & 1))) {
+								++significand;
+							}
+							break;
+						}
+					}
+					significand = significand * 10 + getIntFromChar(c);
+					--decimalExponent;
+					if (significand > 0) {
+						++digitCount;
+					}
+				}
+			}
+			if (rounded && isDigit(c)) {
+				// Eat remaining digits
+				while (advanceAndPeekNextCharacter(&c) && isDigit(c))
+					;
 			}
 		}
 
 		if (c == 'e' || c == 'E') {
-			isFloatingPoint = true;
-
 			++this->inputOffset;
 			peekNextCharacter(&c);
 
-			double base = 10.0;
+			bool isNegativeExponent = false;
 			if (c == '+') {
 				advanceAndPeekNextCharacter(&c);
 			} else if (c == '-') {
-				base = 0.1;
+				isNegativeExponent = true;
 				advanceAndPeekNextCharacter(&c);
 			}
 
@@ -395,33 +433,41 @@ private:
 				throw JsonException("Invalid exponent");
 			}
 
-			unsigned long exponent = 0;
+			int tempExponent = 0;
 			do {
-				exponent = exponent * 10 + (c - '0');
+				tempExponent = tempExponent * 10 + (c - '0');
 			} while (advanceAndPeekNextCharacter(&c) && isDigit(c));
 
-			double power = 1.0;
-			while (exponent > 0) {
-				if (exponent & 1) {
-					power *= base;
-				}
-				exponent >>= 1;
-				base *= base;
+			if (isNegativeExponent) {
+				tempExponent = -tempExponent;
 			}
 
-			this->doubleValue *= power;
+			decimalExponent += tempExponent;
 		}
 
 		if (c != 0 && !isDelimiter(c)) {
 			throw JsonException("Invalid JSON number");
 		}
 
-		if (isFloatingPoint) {
-			return foundToken(JsonToken::VALUE_NUMBER_FLOAT);
+		if (!rounded) {
+			// Decide if number fits in a long
+			if (decimalExponent == 0 && significand <= std::numeric_limits<long>::max()) {
+				this->longValue = significand;
+				return foundToken(JsonToken::VALUE_NUMBER_INT);
+			}
+			if (decimalExponent > 0 && decimalExponent < 20) {
+				uint64_t power = grisu::getIntegerPowTen(decimalExponent);
+				uint64_t mul = power * significand;
+				if (mul >= power && mul <= std::numeric_limits<long>::max()) {
+					this->longValue = mul;
+					return foundToken(JsonToken::VALUE_NUMBER_INT);
+				}
+			}
+			// Fall through to floating point handling
 		}
+		this->doubleValue = grisu::raiseToPowTen((double)significand, decimalExponent);
 
-		this->longValue = this->doubleValue;
-		return foundToken(JsonToken::VALUE_NUMBER_INT);
+		return foundToken(JsonToken::VALUE_NUMBER_FLOAT);
 	}
 
 	void skipPair(JsonToken start, JsonToken end) {
