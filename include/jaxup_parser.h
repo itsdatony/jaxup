@@ -368,11 +368,12 @@ private:
 
 		bool rounded = false;
 		uint64_t significand = getIntFromChar(c);
-		int digitCount = 0, decimalExponent = 0;
+		int decimalExponent = 0;
 		while (peekNextCharacter(&c) && isDigit(c)) {
 			if (significand >= bigLong) {
 				if (significand != bigLong || c > '8') {
 					rounded = true;
+					++decimalExponent;
 					if (c > '5' || (c == '5' && (significand & 1))) {
 						++significand;
 					}
@@ -380,20 +381,18 @@ private:
 				}
 			}
 			significand = significand * 10 + getIntFromChar(c);
-			if (significand > 0) {
-				++digitCount;
-			}
 			++this->inputOffset;
 		}
-		if (rounded && isDigit(c)) {
-			// Eat remaining digits
-			while (advanceAndPeekNextCharacter(&c) && isDigit(c))
-				;
+		// Eat remaining digits
+		while (isDigit(c)) {
+			++decimalExponent;
+			advanceAndPeekNextCharacter(&c);
 		}
 
 		if (c == '.') {
+			advanceAndPeekNextCharacter(&c);
 			if (!rounded) {
-				while (advanceAndPeekNextCharacter(&c) && isDigit(c)) {
+				while (isDigit(c)) {
 					if (significand >= bigLong) {
 						if (significand != bigLong || c > '8') {
 							rounded = true;
@@ -405,21 +404,17 @@ private:
 					}
 					significand = significand * 10 + getIntFromChar(c);
 					--decimalExponent;
-					if (significand > 0) {
-						++digitCount;
-					}
+					advanceAndPeekNextCharacter(&c);
 				}
 			}
-			if (rounded && isDigit(c)) {
-				// Eat remaining digits
-				while (advanceAndPeekNextCharacter(&c) && isDigit(c))
-					;
+			// Eat remaining digits
+			while (isDigit(c)) {
+				advanceAndPeekNextCharacter(&c);
 			}
 		}
 
 		if (c == 'e' || c == 'E') {
-			++this->inputOffset;
-			peekNextCharacter(&c);
+			advanceAndPeekNextCharacter(&c);
 
 			bool isNegativeExponent = false;
 			if (c == '+') {
