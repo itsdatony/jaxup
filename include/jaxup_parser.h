@@ -229,7 +229,7 @@ private:
 	void parseString(std::string& buff) {
 		buff.clear();
 		long code;
-		char c;
+		char c = 0;
 		int runStart;
 		while (true) {
 			runStart = inputOffset;
