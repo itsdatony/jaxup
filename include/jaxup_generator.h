@@ -140,10 +140,10 @@ private:
 		return len;
 	}
 
-	inline int writeLongToBuff(long value, char* buff, int size) {
-		int len = std::snprintf(buff, size, "%ld", value);
+	inline int writeIntegerToBuff(int64_t value, char* buff, int size) {
+		int len = std::snprintf(buff, size, "%lld", (long long)value);
 		if (len < 0) {
-			throw JsonException("Failed to serialize long");
+			throw JsonException("Failed to serialize integer");
 		}
 		if ((unsigned int)len > sizeof(doubleBuff)) {
 			len = sizeof(doubleBuff);
@@ -172,14 +172,14 @@ public:
 		}
 	}
 
-	void write(long value) {
+	void write(int64_t value) {
 		prepareWriteValue();
 		token = JsonToken::VALUE_NUMBER_INT;
 		if (sizeof(doubleBuff) <= initialBuffSize - outputSize) {
-			int len = writeLongToBuff(value, &outputBuffer[outputSize], sizeof(doubleBuff));
+			int len = writeIntegerToBuff(value, &outputBuffer[outputSize], sizeof(doubleBuff));
 			outputSize += len;
 		} else {
-			int len = writeLongToBuff(value, doubleBuff, sizeof(doubleBuff));
+			int len = writeIntegerToBuff(value, doubleBuff, sizeof(doubleBuff));
 			writeBuff(doubleBuff, len);
 		}
 	}

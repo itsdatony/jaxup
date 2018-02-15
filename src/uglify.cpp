@@ -39,7 +39,7 @@ int streamingCopy(std::ifstream& inputFile, std::ofstream& outputFile, bool pret
 			generator->write(parser->getDoubleValue());
 			break;
 		case JsonToken::VALUE_NUMBER_INT:
-			generator->write(parser->getLongValue());
+			generator->write(parser->getIntegerValue());
 			break;
 		case JsonToken::VALUE_STRING:
 			generator->write(parser->getText());

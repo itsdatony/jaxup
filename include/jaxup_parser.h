@@ -65,7 +65,7 @@ static inline int getIntFromChar(char c) {
 
 class JsonParser {
 private:
-	long longValue = 0;
+	int64_t int64Value = 0;
 	JsonToken token = JsonToken::NOT_AVAILABLE;
 	double doubleValue = 0.0;
 	int inputOffset = 0;
@@ -91,11 +91,11 @@ public:
 		return this->currentName;
 	}
 
-	long getLongValue() {
+	int64_t getIntegerValue() {
 		if (this->token == JsonToken::VALUE_NUMBER_INT) {
-			return this->longValue;
+			return this->int64Value;
 		} else if (this->token == JsonToken::VALUE_NUMBER_FLOAT) {
-			return (long)this->doubleValue;
+			return (int64_t)this->doubleValue;
 		}
 		//TODO:
 		throw JsonException("Invalid type");
@@ -105,7 +105,7 @@ public:
 		if (this->token == JsonToken::VALUE_NUMBER_FLOAT) {
 			return this->doubleValue;
 		} else if (this->token == JsonToken::VALUE_NUMBER_INT) {
-			return (double)this->longValue;
+			return (double)this->int64Value;
 		}
 		//TODO:
 		throw JsonException("Invalid type");
@@ -353,12 +353,12 @@ private:
 
 		JsonToken token = parsePositiveNumber(c);
 		this->doubleValue *= -1.0;
-		this->longValue *= -1;
+		this->int64Value *= -1;
 		return token;
 	}
 
 	JsonToken parsePositiveNumber(char c) {
-		static const uint64_t bigLong = (uint64_t)std::numeric_limits<long>::max() / 10;
+		static const uint64_t bigInt = (uint64_t)std::numeric_limits<int64_t>::max() / 10;
 		if (c == '0') {
 			if (peekNextCharacter(&c) && isDigit(c)) {
 				throw JsonException("Leading zeroes are not allowed");
@@ -370,8 +370,8 @@ private:
 		uint64_t significand = getIntFromChar(c);
 		int decimalExponent = 0;
 		while (peekNextCharacter(&c) && isDigit(c)) {
-			if (significand >= bigLong) {
-				if (significand != bigLong || c > '8') {
+			if (significand >= bigInt) {
+				if (significand != bigInt || c > '7') {
 					rounded = true;
 					++decimalExponent;
 					if (c > '5' || (c == '5' && (significand & 1))) {
@@ -393,8 +393,8 @@ private:
 			advanceAndPeekNextCharacter(&c);
 			if (!rounded) {
 				while (isDigit(c)) {
-					if (significand >= bigLong) {
-						if (significand != bigLong || c > '8') {
+					if (significand >= bigInt) {
+						if (significand != bigInt || c > '7') {
 							rounded = true;
 							if (c > '5' || (c == '5' && (significand & 1))) {
 								++significand;
@@ -445,16 +445,16 @@ private:
 		}
 
 		if (!rounded) {
-			// Decide if number fits in a long
-			if (decimalExponent == 0 && significand <= std::numeric_limits<long>::max()) {
-				this->longValue = significand;
+			// Decide if number fits in a int64_t
+			if (decimalExponent == 0 && significand <= std::numeric_limits<int64_t>::max()) {
+				this->int64Value = significand;
 				return foundToken(JsonToken::VALUE_NUMBER_INT);
 			}
 			if (decimalExponent > 0 && decimalExponent < 20) {
 				uint64_t power = grisu::getIntegerPowTen(decimalExponent);
 				uint64_t mul = power * significand;
-				if (mul >= power && mul <= std::numeric_limits<long>::max()) {
-					this->longValue = mul;
+				if (mul >= power && mul <= std::numeric_limits<int64_t>::max()) {
+					this->int64Value = mul;
 					return foundToken(JsonToken::VALUE_NUMBER_INT);
 				}
 			}
