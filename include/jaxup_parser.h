@@ -480,10 +480,10 @@ private:
 	}
 
 	inline bool loadMore() {
-		inputOffset = 0;
-		if (input.eof()) {
+		if (input.eof() || input.bad()) {
 			return false;
 		}
+		inputOffset = 0;
 		input.read(&inputBuffer[0], initialBuffSize);
 		inputSize = input.gcount();
 		return inputSize > 0;
