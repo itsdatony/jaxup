@@ -35,7 +35,7 @@ public:
 	}
 
 	ExplodedFloatingPoint operator*(const ExplodedFloatingPoint& rhs) const {
-		static constexpr uint64_t roundUp32 = 1L << 31;
+		static constexpr uint64_t roundUp32 = 1ULL << 31;
 		uint64_t topL = top32(mantissa);
 		uint64_t botL = bot32(mantissa);
 		uint64_t topR = top32(rhs.mantissa);
@@ -234,7 +234,7 @@ inline void generateDigits(ExplodedFloatingPoint& plus, uint64_t delta, char* bu
 	uint64_t part2 = plus.mantissa & (one.mantissa - 1);
 	len = 0;
 	int kappa = 10;
-	int div = 1e9, d;
+	uint32_t div = 1000000000, d;
 	while (kappa > 0) {
 		d = part1 / div;
 		if (d != 0 || len != 0) {
