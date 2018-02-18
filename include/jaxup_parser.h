@@ -66,8 +66,8 @@ static inline int getIntFromChar(char c) {
 class JsonParser {
 private:
 	int64_t int64Value = 0;
-	JsonToken token = JsonToken::NOT_AVAILABLE;
 	double doubleValue = 0.0;
+	JsonToken token = JsonToken::NOT_AVAILABLE;
 	int inputOffset = 0;
 	int inputSize = 0;
 	char inputBuffer[initialBuffSize];
@@ -77,7 +77,7 @@ private:
 
 public:
 	JsonParser(std::istream& inputStream) : currentName(""), currentString(""), input(inputStream) {
-		currentName.reserve(initialBuffSize);
+		currentName.reserve(32);
 		currentString.reserve(initialBuffSize);
 		tagStack.reserve(32);
 	}

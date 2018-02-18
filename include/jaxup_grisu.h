@@ -229,7 +229,7 @@ inline constexpr char digitToAscii(char d) {
 }
 
 inline void generateDigits(ExplodedFloatingPoint& plus, uint64_t delta, char* buffer, int& len, int& powTen) {
-	ExplodedFloatingPoint one((uint64_t)1 << -plus.exponent, plus.exponent);
+	ExplodedFloatingPoint one(1ULL << -plus.exponent, plus.exponent);
 	uint32_t part1 = plus.mantissa >> -one.exponent;
 	uint64_t part2 = plus.mantissa & (one.mantissa - 1);
 	len = 0;

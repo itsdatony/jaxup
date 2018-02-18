@@ -21,6 +21,7 @@ private:
 	bool prettyPrint;
 	alignas(8) char unicodeBuff[6] = {'\\', 'u', '0', '0', '0', '0'};
 	alignas(8) char doubleBuff[36];
+	char* const doubleBuffEndMarker = doubleBuff + sizeof(doubleBuff);
 
 	void flush() {
 		if (outputSize > 0) {
@@ -128,8 +129,7 @@ private:
 		writeBuff('"');
 	}
 
-	inline int writeDoubleToBuff(double value, char* buff, int /*size*/) {
-		//int len = std::snprintf(buff, size, "%.16g", value);
+	inline int writeDoubleToBuff(double value, char* buff) {
 		int len = grisu::fastDoubleToString(buff, value);
 		if (len < 0) {
 			throw JsonException("Failed to serialize double");
@@ -140,15 +140,34 @@ private:
 		return len;
 	}
 
-	inline int writeIntegerToBuff(int64_t value, char* buff, int size) {
-		int len = std::snprintf(buff, size, "%lld", (long long)value);
-		if (len < 0) {
-			throw JsonException("Failed to serialize integer");
+	inline char* writeIntegerToBuff(int64_t value, char* endMarker) {
+		if (value >= 0) {
+			return writeIntegerToBuff((uint64_t)value, endMarker);
+		} else {
+			char* start = writeIntegerToBuff((uint64_t)(0 - value), endMarker);
+			*--start = '-';
+			return start;
 		}
-		if ((unsigned int)len > sizeof(doubleBuff)) {
-			len = sizeof(doubleBuff);
+	}
+
+	inline char* writeIntegerToBuff(uint64_t value, char* endMarker) {
+		static const char digits[] = "00102030405060708090011121314151617181910212223242526272829203132333435363738393041424344454647484940515253545556575859506162636465666768696071727374757677787970818283848586878889809192939495969798999";
+		unsigned int offset;
+		char* start = endMarker;
+		while (value >= 100) {
+			offset = (value % 100) * 2;
+			value = value / 100;
+			*--start = digits[offset];
+			*--start = digits[offset + 1];
 		}
-		return len;
+		if (value < 10) {
+			*--start = '0' + value;
+			return start;
+		}
+		offset = value * 2;
+		*--start = digits[offset];
+		*--start = digits[offset + 1];
+		return start;
 	}
 
 public:
@@ -164,10 +183,10 @@ public:
 		prepareWriteValue();
 		token = JsonToken::VALUE_NUMBER_FLOAT;
 		if (sizeof(doubleBuff) <= initialBuffSize - outputSize) {
-			int len = writeDoubleToBuff(value, &outputBuffer[outputSize], sizeof(doubleBuff));
+			int len = writeDoubleToBuff(value, &outputBuffer[outputSize]);
 			outputSize += len;
 		} else {
-			int len = writeDoubleToBuff(value, doubleBuff, sizeof(doubleBuff));
+			int len = writeDoubleToBuff(value, doubleBuff);
 			writeBuff(doubleBuff, len);
 		}
 	}
@@ -175,13 +194,8 @@ public:
 	void write(int64_t value) {
 		prepareWriteValue();
 		token = JsonToken::VALUE_NUMBER_INT;
-		if (sizeof(doubleBuff) <= initialBuffSize - outputSize) {
-			int len = writeIntegerToBuff(value, &outputBuffer[outputSize], sizeof(doubleBuff));
-			outputSize += len;
-		} else {
-			int len = writeIntegerToBuff(value, doubleBuff, sizeof(doubleBuff));
-			writeBuff(doubleBuff, len);
-		}
+		char* start = writeIntegerToBuff(value, doubleBuffEndMarker);
+		writeBuff(start, doubleBuffEndMarker - start);
 	}
 
 	void write(bool value) {
