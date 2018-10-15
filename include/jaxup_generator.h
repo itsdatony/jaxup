@@ -100,7 +100,7 @@ private:
 		for (std::size_t i = 0; i < length; ++i) {
 			char c = value[i];
 			if ((c >= ' ' || c < 0) && c != '"' && c != '\\') {
-				if (runStart < 0) {
+				if (run == 0) {
 					runStart = i;
 				}
 				++run;
@@ -109,7 +109,6 @@ private:
 			if (run > 0) {
 				writeBuff(&value[runStart], run);
 				run = 0;
-				runStart = -1;
 			}
 
 			switch (c) {

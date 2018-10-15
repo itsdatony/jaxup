@@ -221,7 +221,7 @@ inline const ExplodedFloatingPoint& getCachedPower(int min, int& powTen) {
 	static const double baseChange = 1.0 / std::log2(10.0);
 	int k = static_cast<int>(std::ceil((min + 63) * baseChange)) + 347;
 	int i = (k >> 3) + 1;
-	assert(i >= 0 && i < (sizeof(powerCache) / sizeof(powerCache[0])));
+	assert(i >= 0 && static_cast<unsigned int>(i) < (sizeof(powerCache) / sizeof(powerCache[0])));
 	powTen = 348 - (i << 3);
 	return powerCache[i];
 }
