@@ -22,6 +22,7 @@
 
 #include <chrono>
 #include <iostream>
+#include <string>
 #include <jaxup_grisu.h>
 
 using namespace jaxup::grisu;

@@ -34,7 +34,7 @@ namespace jaxup {
 
 class JsonGenerator {
 private:
-	unsigned int outputSize = 0;
+	std::size_t outputSize = 0;
 	char outputBuffer[initialBuffSize];
 	std::ostream& output;
 	JsonToken token = JsonToken::NOT_AVAILABLE;
@@ -59,12 +59,12 @@ private:
 		outputBuffer[outputSize++] = c;
 	}
 
-	inline void writeBuff(const char* c, unsigned long length) {
+	inline void writeBuff(const char* c, std::size_t length) {
 		if (outputSize + length <= initialBuffSize) {
 			std::memcpy(&outputBuffer[outputSize], c, length);
 			outputSize += length;
 		} else {
-			long first = initialBuffSize - outputSize;
+			std::size_t first = initialBuffSize - outputSize;
 			std::memcpy(&outputBuffer[outputSize], c, first);
 			outputSize = initialBuffSize;
 			flush();
@@ -93,11 +93,11 @@ private:
 		}
 	}
 
-	inline void encodeString(const char* value, long length = -1) {
+	inline void encodeString(const char* value, std::size_t length) {
 		writeBuff('"');
-		long run = 0;
-		long runStart = -1;
-		for (long i = 0; value[i] != 0 || i < length; ++i) {
+		std::size_t run = 0;
+		std::size_t runStart = -1;
+		for (std::size_t i = 0; i < length; ++i) {
 			char c = value[i];
 			if ((c >= ' ' || c < 0) && c != '"' && c != '\\') {
 				if (runStart < 0) {
@@ -183,10 +183,10 @@ private:
 			*--start = digits[offset + 1];
 		}
 		if (value < 10) {
-			*--start = '0' + value;
+			*--start = '0' + static_cast<char>(value);
 			return start;
 		}
-		offset = value * 2;
+		offset = static_cast<unsigned int>(value) * 2;
 		*--start = digits[offset];
 		*--start = digits[offset + 1];
 		return start;
@@ -245,7 +245,7 @@ public:
 			return;
 		}
 		token = JsonToken::VALUE_STRING;
-		encodeString(value);
+		encodeString(value, std::strlen(value));
 	}
 
 	void write(const std::string& value) {

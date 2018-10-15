@@ -468,14 +468,14 @@ private:
 
 		if (!rounded) {
 			// Decide if number fits in a int64_t
-			if (decimalExponent == 0 && significand <= std::numeric_limits<int64_t>::max()) {
+			if (decimalExponent == 0 && significand <= static_cast<uint64_t>(std::numeric_limits<int64_t>::max())) {
 				this->int64Value = significand;
 				return foundToken(JsonToken::VALUE_NUMBER_INT);
 			}
 			if (decimalExponent > 0 && decimalExponent < 20) {
 				uint64_t power = grisu::getIntegerPowTen(decimalExponent);
 				uint64_t mul = power * significand;
-				if (mul >= power && mul <= std::numeric_limits<int64_t>::max()) {
+				if (mul == 0 || mul / power == significand) {
 					this->int64Value = mul;
 					return foundToken(JsonToken::VALUE_NUMBER_INT);
 				}
@@ -507,7 +507,7 @@ private:
 		}
 		inputOffset = 0;
 		input.read(&inputBuffer[0], initialBuffSize);
-		inputSize = input.gcount();
+		inputSize = static_cast<int>(input.gcount());
 		return inputSize > 0;
 	}
 

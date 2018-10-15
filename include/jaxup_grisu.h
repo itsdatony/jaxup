@@ -106,13 +106,17 @@ private:
 		uint64_t u64;
 	} DoubleConverter;
 
-	static_assert(sizeof(double) == sizeof(uint64_t));
-	inline constexpr uint64_t doubleAsU64(const double d) const {
-		return DoubleConverter{.dub = d}.u64;
+	static_assert(sizeof(double) == sizeof(uint64_t), "Double precision floating point values are expected to be 64-bits wide");
+	inline uint64_t doubleAsU64(const double d) const {
+		DoubleConverter converter;
+		converter.dub = d;
+		return converter.u64;
 	}
 
-	inline constexpr double u64AsDouble(const uint64_t u64) const {
-		return DoubleConverter{.u64 = u64}.dub;
+	inline double u64AsDouble(const uint64_t u64) const {
+		DoubleConverter converter;
+		converter.u64 = u64;
+		return converter.dub;
 	}
 
 	inline constexpr uint64_t top32(uint64_t val) const {
@@ -252,7 +256,7 @@ inline constexpr char digitToAscii(char d) {
 
 inline void generateDigits(ExplodedFloatingPoint& plus, uint64_t delta, char* buffer, int& len, int& powTen) {
 	ExplodedFloatingPoint one(1ULL << -plus.exponent, plus.exponent);
-	uint32_t part1 = plus.mantissa >> -one.exponent;
+	uint32_t part1 = static_cast<uint32_t>(plus.mantissa >> -one.exponent);
 	uint64_t part2 = plus.mantissa & (one.mantissa - 1);
 	len = 0;
 	int kappa = 10;
@@ -272,7 +276,7 @@ inline void generateDigits(ExplodedFloatingPoint& plus, uint64_t delta, char* bu
 	}
 	do {
 		part2 *= 10;
-		d = part2 >> -one.exponent;
+		d = static_cast<uint32_t>(part2 >> -one.exponent);
 		if (d != 0 || len != 0) {
 			buffer[len++] = digitToAscii(d);
 		}
