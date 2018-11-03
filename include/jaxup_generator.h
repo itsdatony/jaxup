@@ -99,7 +99,7 @@ private:
 		std::size_t runStart = -1;
 		for (std::size_t i = 0; i < length; ++i) {
 			char c = value[i];
-			if ((c >= ' ' || c < 0) && c != '"' && c != '\\') {
+			if ((c >= ' ' || (signed char)c < 0) && c != '"' && c != '\\') {
 				if (run == 0) {
 					runStart = i;
 				}

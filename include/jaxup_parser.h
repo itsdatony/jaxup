@@ -257,7 +257,7 @@ private:
 			runStart = inputOffset;
 			while (inputOffset < inputSize) {
 				c = inputBuffer[inputOffset];
-				if ((c < ' ' && c >= 0) || c == '"' || c == '\\') {
+				if ((c < ' ' && (signed char)c >= 0) || c == '"' || c == '\\') {
 					break;
 				}
 				++inputOffset;
