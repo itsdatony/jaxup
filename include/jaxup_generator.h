@@ -32,11 +32,42 @@
 
 namespace jaxup {
 
+template <class source, size_t size>
+class JsonDestination {
+};
+
+template <size_t size>
+class JsonDestination<std::ostream, size> {
+public:
+	JsonDestination(std::ostream& output) : output(output) {
+	}
+	inline void write(char bytes[size], size_t count) {
+		output.write(bytes, count);
+	}
+
+private:
+	std::ostream& output;
+};
+
+template <size_t size>
+class JsonDestination<FILE*, size> {
+public:
+	JsonDestination(FILE* output) : output(output) {
+	}
+	inline void write(char bytes[size], size_t count) {
+		fwrite(bytes, 1, count, output);
+	}
+
+private:
+	FILE* output;
+};
+
+template <class dest>
 class JsonGenerator {
 private:
 	std::size_t outputSize = 0;
 	char outputBuffer[initialBuffSize];
-	std::ostream& output;
+	JsonDestination<dest, initialBuffSize> output;
 	JsonToken token = JsonToken::NOT_AVAILABLE;
 	std::vector<JsonToken> tagStack;
 	std::string prettyBuff = "\n";
@@ -192,7 +223,7 @@ private:
 	}
 
 public:
-	JsonGenerator(std::ostream& outputStream, bool prettyPrint) : output(outputStream), prettyPrint(prettyPrint) {
+	JsonGenerator(dest& output, bool prettyPrint) : output(output), prettyPrint(prettyPrint) {
 		tagStack.reserve(32);
 	}
 

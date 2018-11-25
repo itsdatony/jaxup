@@ -31,49 +31,42 @@
 
 namespace jaxup {
 
-//template <class source, size_t size>
-//class JsonSource {
-//public:
-//	JsonSource(source& input) : input(&input) {
-//	}
-//	int inputOffset = 0;
-//	int inputSize = 0;
-//	char inputBuffer[size];
-//	void reset(source& newSource) {
-//		this->inputOffset = 0;
-//		this->inputSize = 0;
-//		this->input = &newSource;
-//	}
-//	bool loadMore() {
-//		return false;
-//	}
-//
-//private:
-//	source* input;
-//};
-//
-//template <size_t size>
-//class JsonSource<std::istream, size> {
-//public:
-//	//	JsonSource(std::istream& input) :
-//	//			input(&input) {
-//	//	}
-//	//	int inputOffset = 0;
-//	//	int inputSize = 0;
-//	//	char inputBuffer[size];
-//	bool loadMore() {
-//		this->inputOffset = 0;
-//		if (this->input->eof()) {
-//			return false;
-//		}
-//		this->input->read(&this->inputBuffer[0], size);
-//		this->inputSize = this->input->gcount();
-//		return this->inputSize > 0;
-//	}
-//
-//private:
-//	std::istream* input;
-//};
+template <class source, size_t size>
+class JsonSource {
+};
+
+template <size_t size>
+class JsonSource<std::istream, size> {
+public:
+	JsonSource(std::istream& input) : input(input) {
+	}
+	inline size_t loadMore(char inputBuffer[size]) {
+		if (input.eof() || input.bad()) {
+			return 0;
+		}
+		input.read(&inputBuffer[0], size);
+		return input.gcount();
+	}
+
+private:
+	std::istream& input;
+};
+
+template <size_t size>
+class JsonSource<FILE*, size> {
+public:
+	JsonSource(FILE* input) : input(input) {
+	}
+	inline size_t loadMore(char inputBuffer[size]) {
+		if (input == nullptr) {
+			return 0;
+		}
+		return fread(&inputBuffer[0], 1, size, input);
+	}
+
+private:
+	FILE* input;
+};
 
 static inline double getDoubleFromChar(char c) {
 	static const double DIGITS[] = {0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0,
@@ -85,6 +78,7 @@ static inline int getIntFromChar(char c) {
 	return c - '0';
 }
 
+template <class source>
 class JsonParser {
 private:
 	int64_t int64Value = 0;
@@ -95,10 +89,10 @@ private:
 	char inputBuffer[initialBuffSize];
 	std::string currentName, currentString;
 	std::vector<JsonToken> tagStack;
-	std::istream& input;
+	JsonSource<source, initialBuffSize> input;
 
 public:
-	JsonParser(std::istream& inputStream) : currentName(""), currentString(""), input(inputStream) {
+	JsonParser(source& input) : currentName(""), currentString(""), input(input) {
 		currentName.reserve(32);
 		currentString.reserve(initialBuffSize);
 		tagStack.reserve(32);
@@ -403,7 +397,7 @@ private:
 				}
 			}
 			significand = significand * 10 + getIntFromChar(c);
-			++this->inputOffset;
+			++inputOffset;
 		}
 		// Eat remaining digits
 		while (isDigit(c)) {
@@ -502,12 +496,8 @@ private:
 	}
 
 	inline bool loadMore() {
-		if (input.eof() || input.bad()) {
-			return false;
-		}
 		inputOffset = 0;
-		input.read(&inputBuffer[0], initialBuffSize);
-		inputSize = static_cast<int>(input.gcount());
+		inputSize = static_cast<int>(input.loadMore(inputBuffer));
 		return inputSize > 0;
 	}
 

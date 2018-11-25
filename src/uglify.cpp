@@ -20,18 +20,17 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
-#include <iostream>
 #include <chrono>
 #include <fstream>
+#include <iostream>
 #include <jaxup.h>
 
 using namespace jaxup;
 
-int streamingCopy(std::ifstream& inputFile, std::ofstream& outputFile, bool prettify) {
+int streamingCopy(FILE* inputFile, FILE* outputFile, bool prettify) {
 	JsonFactory factory;
-	std::shared_ptr<JsonParser> parser = factory.createJsonParser(inputFile);
-	std::shared_ptr<JsonGenerator> generator = factory.createJsonGenerator(
-			outputFile, prettify);
+	auto parser = factory.createJsonParser(inputFile);
+	auto generator = factory.createJsonGenerator(outputFile, prettify);
 	JsonToken token;
 	int i = 0;
 	while ((token = parser->nextToken()) != JsonToken::NOT_AVAILABLE) {
@@ -80,8 +79,10 @@ int streamingCopy(std::ifstream& inputFile, std::ofstream& outputFile, bool pret
 
 int main(int argc, char* argv[]) {
 	auto start = std::chrono::high_resolution_clock::now();
-	std::ifstream inputFile(argv[1]);
-	std::ofstream outputFile(argv[2]);
+	//std::ifstream inputFile(argv[1]);
+	//std::ofstream outputFile(argv[2]);
+	FILE* inputFile = fopen(argv[1], "r");
+	FILE* outputFile = fopen(argv[2], "w");
 	bool prettify = false;
 	if (argc > 3 && std::string("--prettify") == argv[3]) {
 		prettify = true;
@@ -96,10 +97,10 @@ int main(int argc, char* argv[]) {
 
 	auto end = std::chrono::high_resolution_clock::now();
 	auto duration = std::chrono::duration_cast<std::chrono::microseconds>(
-			end - start).count();
+						end - start)
+						.count();
 	std::cout << "Microseconds: " << duration << std::endl;
 	std::cout << "Total token count: " << numTokens << std::endl;
 
 	return 0;
 }
-

@@ -29,13 +29,15 @@ using namespace jaxup;
 
 int main(int /*argc*/, char* argv[]) {
 	auto start = std::chrono::high_resolution_clock::now();
-	std::ifstream inputFile(argv[1]);
+	//std::ifstream inputFile(argv[1]);
+	FILE* inputFile = fopen(argv[1], "r");
+	setbuf(inputFile, nullptr);
 
 	JsonToken token;
 	int i = 0;
 	try {
 		JsonFactory factory;
-		std::shared_ptr<JsonParser> parser = factory.createJsonParser(
+		std::shared_ptr<JsonParser<FILE*>> parser = factory.createJsonParser(
 			inputFile);
 		while ((token = parser->nextToken()) != JsonToken::NOT_AVAILABLE) {
 			++i;

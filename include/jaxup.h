@@ -23,23 +23,29 @@
 #ifndef JAXUP_H
 #define JAXUP_H
 
-#include "jaxup_parser.h"
 #include "jaxup_generator.h"
+#include "jaxup_parser.h"
 #include <memory>
 
 namespace jaxup {
 
 class JsonFactory {
 public:
-	std::shared_ptr<JsonParser> createJsonParser(std::istream& inputStream) {
-		return std::make_shared<JsonParser>(inputStream);
+	std::shared_ptr<JsonParser<std::istream>> createJsonParser(std::istream& inputStream) {
+		return std::make_shared<JsonParser<std::istream>>(inputStream);
 	}
-	std::shared_ptr<JsonGenerator> createJsonGenerator(
-			std::ostream& outputStream, bool prettyPrint = false) {
-		return std::make_shared<JsonGenerator>(outputStream, prettyPrint);
+	std::shared_ptr<JsonParser<FILE*>> createJsonParser(FILE* inputFile) {
+		return std::make_shared<JsonParser<FILE*>>(inputFile);
+	}
+	std::shared_ptr<JsonGenerator<std::ostream>> createJsonGenerator(
+		std::ostream& outputStream, bool prettyPrint = false) {
+		return std::make_shared<JsonGenerator<std::ostream>>(outputStream, prettyPrint);
+	}
+	std::shared_ptr<JsonGenerator<FILE*>> createJsonGenerator(
+		FILE* outputFile, bool prettyPrint = false) {
+		return std::make_shared<JsonGenerator<FILE*>>(outputFile, prettyPrint);
 	}
 };
-
 }
 
 #endif
