@@ -111,7 +111,7 @@ public:
 		if (this->token == JsonToken::VALUE_NUMBER_INT) {
 			return this->int64Value;
 		} else if (this->token == JsonToken::VALUE_NUMBER_FLOAT) {
-			return (int64_t)this->doubleValue;
+			return static_cast<int64_t>(this->doubleValue);
 		}
 		//TODO:
 		throw JsonException("Invalid type");
@@ -121,7 +121,7 @@ public:
 		if (this->token == JsonToken::VALUE_NUMBER_FLOAT) {
 			return this->doubleValue;
 		} else if (this->token == JsonToken::VALUE_NUMBER_INT) {
-			return (double)this->int64Value;
+			return static_cast<double>(this->int64Value);
 		}
 		//TODO:
 		throw JsonException("Invalid type");
@@ -180,8 +180,11 @@ public:
 		}
 
 		if (this->token != JsonToken::FIELD_NAME && !this->tagStack.empty() && this->tagStack.back() == JsonToken::START_OBJECT) {
-			// Expect a field name next
 			getNextSignificantCharacter(&c);
+			if (c == '}') {
+				return parseCloseObject();
+			}
+			// Expect a field name next
 			if (c != '"') {
 				throw JsonException("Expected a quoted string value");
 			}
