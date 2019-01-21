@@ -1,0 +1,366 @@
+// The MIT License (MIT)
+//
+// Copyright (c) 2017-2019 Kyle Hawk
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to
+// deal in the Software without restriction, including without limitation the
+// rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+// sell copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+// FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+// IN THE SOFTWARE.
+
+#ifndef JAXUP_NODE_H
+#define JAXUP_NODE_H
+
+#include "jaxup_common.h"
+#include "jaxup_generator.h"
+#include "jaxup_parser.h"
+
+#include <cstdint>
+#include <memory>
+#include <string>
+#include <vector>
+
+namespace jaxup {
+
+enum class JsonNodeType {
+	VALUE_OBJECT,
+	VALUE_ARRAY,
+	VALUE_STRING,
+	VALUE_NUMBER_INT,
+	VALUE_NUMBER_FLOAT,
+	VALUE_TRUE,
+	VALUE_FALSE,
+	VALUE_NULL
+};
+
+class JsonNode {
+public:
+	JsonNode() = default;
+	JsonNode(JsonNode&& rhs) {
+		type = rhs.type;
+		switch (type) {
+		case JsonNodeType::VALUE_OBJECT:
+			value.object = std::move(rhs.value.object);
+			break;
+		case JsonNodeType::VALUE_ARRAY:
+			value.array = std::move(rhs.value.array);
+			break;
+		case JsonNodeType::VALUE_STRING:
+			value.str = std::move(rhs.value.str);
+			break;
+		case JsonNodeType::VALUE_NUMBER_INT:
+			value.i = rhs.value.i;
+			break;
+		case JsonNodeType::VALUE_NUMBER_FLOAT:
+			value.d = rhs.value.d;
+			break;
+		default:
+			value.i = 0;
+		}
+		rhs.type = JsonNodeType::VALUE_NULL;
+		rhs.value.i = 0;
+	}
+	~JsonNode() {
+		makeNull();
+	}
+
+	JsonNodeType getType() const {
+		return type;
+	}
+
+	int64_t getInteger() const {
+		if (this->type == JsonNodeType::VALUE_NUMBER_INT) {
+			return this->value.i;
+		} else if (this->type == JsonNodeType::VALUE_NUMBER_FLOAT) {
+			return static_cast<int64_t>(this->value.d);
+		}
+		//TODO:
+		throw JsonException("Invalid type");
+	}
+
+	inline int64_t getInteger(int64_t defaultValue) const {
+		if (this->type == JsonNodeType::VALUE_NULL) {
+			return defaultValue;
+		}
+		return getInteger();
+	}
+
+	void setInteger(int64_t newValue) {
+		setType(JsonNodeType::VALUE_NUMBER_INT);
+		this->value.i = newValue;
+	}
+
+	double getDouble() const {
+		if (this->type == JsonNodeType::VALUE_NUMBER_FLOAT) {
+			return this->value.d;
+		} else if (this->type == JsonNodeType::VALUE_NUMBER_INT) {
+			return static_cast<double>(this->value.i);
+		}
+		//TODO:
+		throw JsonException("Invalid type");
+	}
+
+	inline double getDouble(double defaultValue) const {
+		if (this->type == JsonNodeType::VALUE_NULL) {
+			return defaultValue;
+		}
+		return getDouble();
+	}
+
+	void setDouble(double newValue) {
+		setType(JsonNodeType::VALUE_NUMBER_FLOAT);
+		this->value.d = newValue;
+	}
+
+	bool getBoolean() const {
+		if (this->type == JsonNodeType::VALUE_TRUE) {
+			return true;
+		} else if (this->type == JsonNodeType::VALUE_FALSE) {
+			return false;
+		}
+		//TODO:
+		throw JsonException("Invalid type");
+	}
+
+	inline bool getBoolean(bool defaultValue) const {
+		if (this->type == JsonNodeType::VALUE_NULL) {
+			return defaultValue;
+		}
+		return getBoolean();
+	}
+
+	void setBoolean(bool newValue) {
+		setType(newValue ? JsonNodeType::VALUE_TRUE : JsonNodeType::VALUE_FALSE);
+	}
+
+	const std::string& getString() const {
+		if (this->type == JsonNodeType::VALUE_STRING) {
+			return *this->value.str;
+		}
+		//TODO:
+		throw JsonException("Invalid type");
+	}
+
+	inline const std::string& getString(const std::string& defaultValue) const {
+		if (this->type == JsonNodeType::VALUE_NULL) {
+			return defaultValue;
+		}
+		return getString();
+	}
+
+	void setString(const std::string& newValue) {
+		setType(JsonNodeType::VALUE_STRING);
+		new (&this->value.str) StrPtr(new std::string(newValue));
+	}
+
+	bool isNull() const {
+		return this->type == JsonNodeType::VALUE_NULL;
+	}
+
+	void makeNull() {
+		setType(JsonNodeType::VALUE_NULL);
+	}
+
+	void makeArray() {
+		if (this->type == JsonNodeType::VALUE_ARRAY) {
+			return;
+		}
+		setType(JsonNodeType::VALUE_ARRAY);
+		new (&this->value.array) ArrayPtr(new std::vector<JsonNode>);
+	}
+
+	JsonNode& operator[](size_t n) {
+		if (this->type != JsonNodeType::VALUE_ARRAY) {
+			makeArray();
+		}
+		if (n > this->value.array->size()) {
+			if (n > this->value.array->size() + 1) {
+				this->value.array->resize(n + 1);
+			} else {
+				this->value.array->emplace_back(std::move(JsonNode()));
+			}
+		}
+		return this->value.array->at(n);
+	}
+
+	JsonNode& append() {
+		if (this->type != JsonNodeType::VALUE_ARRAY) {
+			makeArray();
+		}
+		this->value.array->emplace_back(std::move(JsonNode()));
+		return this->value.array->back();
+	}
+
+	void makeObject() {
+		if (this->type == JsonNodeType::VALUE_OBJECT) {
+			return;
+		}
+		setType(JsonNodeType::VALUE_OBJECT);
+		new (&this->value.object) ObjectPtr(new std::vector<std::pair<std::string, JsonNode>>);
+	}
+
+	JsonNode& operator[](const std::string& key) {
+		if (this->type != JsonNodeType::VALUE_OBJECT) {
+			makeObject();
+		}
+		for (auto& pair : *this->value.object) {
+			if (pair.first == key) {
+				return pair.second;
+			}
+		}
+		this->value.object->emplace_back(key, std::move(JsonNode()));
+		return this->value.object->back().second;
+	}
+
+	size_t size() const {
+		switch (this->type) {
+		case JsonNodeType::VALUE_ARRAY:
+			return this->value.array->size();
+		case JsonNodeType::VALUE_OBJECT:
+			return this->value.object->size();
+		default:
+			return 1;
+		}
+	}
+
+	template <class dest>
+	void write(JsonGenerator<dest>& generator) const {
+		switch (type) {
+		case JsonNodeType::VALUE_NUMBER_FLOAT:
+			generator.write(value.d);
+			break;
+		case JsonNodeType::VALUE_NUMBER_INT:
+			generator.write(value.i);
+			break;
+		case JsonNodeType::VALUE_NULL:
+			generator.write(nullptr);
+			break;
+		case JsonNodeType::VALUE_TRUE:
+			generator.write(true);
+			break;
+		case JsonNodeType::VALUE_FALSE:
+			generator.write(false);
+			break;
+		case JsonNodeType::VALUE_STRING:
+			generator.write(*value.str);
+			break;
+		case JsonNodeType::VALUE_ARRAY:
+			generator.startArray();
+			for (const auto& node : *value.array) {
+				node.write(generator);
+			}
+			generator.endArray();
+			break;
+		case JsonNodeType::VALUE_OBJECT:
+			generator.startObject();
+			for (const auto& pair : *value.object) {
+				generator.writeFieldName(pair.first);
+				pair.second.write(generator);
+			}
+			generator.endObject();
+			break;
+		}
+	}
+
+	template <class source>
+	void read(JsonParser<source>& parser) {
+		JsonToken token = parser.currentToken();
+		if (token == JsonToken::NOT_AVAILABLE) {
+			// Give a kick start if the stream hasn't been read from
+			token = parser.nextToken();
+		}
+
+		switch (token) {
+		case JsonToken::VALUE_NUMBER_FLOAT:
+			setDouble(parser.getDoubleValue());
+			break;
+		case JsonToken::VALUE_NUMBER_INT:
+			setInteger(parser.getIntegerValue());
+			break;
+		case JsonToken::VALUE_NULL:
+			makeNull();
+			break;
+		case JsonToken::VALUE_TRUE:
+			setBoolean(true);
+			break;
+		case JsonToken::VALUE_FALSE:
+			setBoolean(false);
+			break;
+		case JsonToken::VALUE_STRING:
+			setString(parser.getText());
+			break;
+		case JsonToken::START_ARRAY: {
+			makeArray();
+			JsonNode newNode;
+			JsonToken current = parser.nextToken();
+			while (current != JsonToken::END_ARRAY && current != JsonToken::NOT_AVAILABLE) {
+				newNode.read(parser);
+				this->value.array->emplace_back(std::move(newNode));
+				current = parser.currentToken();
+			}
+		} break;
+		case JsonToken::START_OBJECT: {
+			makeObject();
+			JsonNode newNode;
+			std::string fieldName;
+			JsonToken current = parser.nextToken();
+			while (current == JsonToken::FIELD_NAME) {
+				fieldName = parser.getCurrentName();
+				current = parser.nextToken();
+				newNode.read(parser);
+				current = parser.currentToken();
+				this->value.object->emplace_back(fieldName, std::move(newNode));
+			}
+		} break;
+		default:
+			return;
+		}
+		parser.nextToken();
+	}
+
+private:
+	JsonNodeType type = JsonNodeType::VALUE_NULL;
+	using StrPtr = std::unique_ptr<std::string>;
+	using ArrayPtr = std::unique_ptr<std::vector<JsonNode>>;
+	using ObjectPtr = std::unique_ptr<std::vector<std::pair<std::string, JsonNode>>>;
+	union Value {
+		Value() { i = 0; }
+		~Value() {}
+		int64_t i;
+		double d;
+		StrPtr str;
+		ArrayPtr array;
+		ObjectPtr object;
+	} value;
+	void setType(JsonNodeType newType) {
+		switch (type) {
+		case JsonNodeType::VALUE_STRING:
+			value.str.~StrPtr();
+			break;
+		case JsonNodeType::VALUE_ARRAY:
+			value.array.~ArrayPtr();
+			break;
+		case JsonNodeType::VALUE_OBJECT:
+			value.object.~ObjectPtr();
+			break;
+		default:
+			break;
+		}
+		type = newType;
+	}
+};
+}
+
+#endif

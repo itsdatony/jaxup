@@ -25,6 +25,7 @@
 
 #include "jaxup_generator.h"
 #include "jaxup_parser.h"
+#include "jaxup_node.h"
 #include <memory>
 
 namespace jaxup {
