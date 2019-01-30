@@ -250,8 +250,8 @@ inline double raiseToPowTen(double base, int powTen) {
 	return base * powers[powTen];
 }
 
-inline constexpr char digitToAscii(char d) {
-	return '0' + d;
+inline constexpr char digitToAscii(unsigned int d) {
+	return '0' + static_cast<char>(d);
 }
 
 inline void generateDigits(ExplodedFloatingPoint& plus, uint64_t delta, char* buffer, int& len, int& powTen) {

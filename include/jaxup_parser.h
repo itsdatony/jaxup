@@ -370,10 +370,10 @@ private:
 			throw JsonException("Invalid number");
 		}
 
-		JsonToken token = parsePositiveNumber(c);
+		JsonToken output = parsePositiveNumber(c);
 		this->doubleValue *= -1.0;
 		this->int64Value *= -1;
-		return token;
+		return output;
 	}
 
 	JsonToken parsePositiveNumber(char c) {
@@ -536,9 +536,9 @@ private:
 			;
 	}
 
-	inline JsonToken foundToken(JsonToken token) {
-		this->token = token;
-		return token;
+	inline JsonToken foundToken(JsonToken found) {
+		this->token = found;
+		return found;
 	}
 
 	static inline bool isInsignificantWhitespace(char c) {

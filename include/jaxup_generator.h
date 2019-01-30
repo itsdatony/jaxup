@@ -65,16 +65,16 @@ private:
 template <class dest>
 class JsonGenerator {
 private:
-	std::size_t outputSize = 0;
+	alignas(8) char unicodeBuff[8] = {'\\', 'u', '0', '0', '0', '0', 0, 0};
+	alignas(8) char doubleBuff[36];
 	char outputBuffer[initialBuffSize];
+	std::size_t outputSize = 0;
+	char* const doubleBuffEndMarker = doubleBuff + sizeof(doubleBuff);
 	JsonDestination<dest, initialBuffSize> output;
 	JsonToken token = JsonToken::NOT_AVAILABLE;
 	std::vector<JsonToken> tagStack;
 	std::string prettyBuff = "\n";
 	bool prettyPrint;
-	alignas(8) char unicodeBuff[6] = {'\\', 'u', '0', '0', '0', '0'};
-	alignas(8) char doubleBuff[36];
-	char* const doubleBuffEndMarker = doubleBuff + sizeof(doubleBuff);
 
 	void flush() {
 		if (outputSize > 0) {
@@ -127,7 +127,7 @@ private:
 	inline void encodeString(const char* value, std::size_t length) {
 		writeBuff('"');
 		std::size_t run = 0;
-		std::size_t runStart = -1;
+		std::size_t runStart = 0;
 		for (std::size_t i = 0; i < length; ++i) {
 			char c = value[i];
 			if ((c >= ' ' || (signed char)c < 0) && c != '"' && c != '\\') {
