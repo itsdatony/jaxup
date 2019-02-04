@@ -45,7 +45,7 @@ public:
 			return 0;
 		}
 		input.read(&inputBuffer[0], size);
-		return input.gcount();
+		return static_cast<size_t>(input.gcount());
 	}
 
 private:
@@ -99,45 +99,42 @@ public:
 	}
 	~JsonParser() = default;
 
-	JsonToken currentToken() {
+	JsonToken currentToken() const {
 		return this->token;
 	}
 
-	const std::string& getCurrentName() {
+	const std::string& getCurrentName() const {
 		return this->currentName;
 	}
 
-	int64_t getIntegerValue() {
+	int64_t getIntegerValue() const {
 		if (this->token == JsonToken::VALUE_NUMBER_INT) {
 			return this->int64Value;
 		} else if (this->token == JsonToken::VALUE_NUMBER_FLOAT) {
 			return static_cast<int64_t>(this->doubleValue);
 		}
-		//TODO:
-		throw JsonException("Invalid type");
+		throw JsonException("Attempted to parse a non-numeric JSON token as an integer");
 	}
 
-	double getDoubleValue() {
+	double getDoubleValue() const {
 		if (this->token == JsonToken::VALUE_NUMBER_FLOAT) {
 			return this->doubleValue;
 		} else if (this->token == JsonToken::VALUE_NUMBER_INT) {
 			return static_cast<double>(this->int64Value);
 		}
-		//TODO:
-		throw JsonException("Invalid type");
+		throw JsonException("Attempted to parse a non-numeric JSON token as a double");
 	}
 
-	bool getBooleanValue() {
+	bool getBooleanValue() const {
 		if (this->token == JsonToken::VALUE_TRUE) {
 			return true;
 		} else if (this->token == JsonToken::VALUE_FALSE) {
 			return false;
 		}
-		//TODO:
-		throw JsonException("Invalid type");
+		throw JsonException("Attempted to parse a non-boolean JSON token as a boolean");
 	}
 
-	const std::string& getText() {
+	const std::string& getText() const {
 		return this->currentString;
 	}
 

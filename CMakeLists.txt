@@ -19,8 +19,8 @@ endif()
 add_library(jaxup INTERFACE)
 target_include_directories(jaxup INTERFACE include/)
 
-add_executable(grank src/main.cpp)
-target_link_libraries(grank jaxup)
+add_executable(fastParse src/main.cpp)
+target_link_libraries(fastParse jaxup)
 
 add_executable(uglify src/uglify.cpp)
 target_link_libraries(uglify jaxup)

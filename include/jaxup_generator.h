@@ -250,6 +250,10 @@ public:
 		writeBuff(start, doubleBuffEndMarker - start);
 	}
 
+	inline void write(int32_t value) {
+		write(static_cast<int64_t>(value));
+	}
+
 	void write(bool value) {
 		prepareWriteValue();
 		if (value) {
@@ -313,6 +317,11 @@ public:
 		}
 	}
 
+	inline void startObject(const std::string& field) {
+		writeFieldName(field);
+		startObject();
+	}
+
 	void endObject() {
 		if (tagStack.empty() || tagStack.back() != JsonToken::START_OBJECT) {
 			throw JsonException("Tried to close an object while outside of an object");
@@ -334,6 +343,11 @@ public:
 		if (prettyPrint) {
 			prettyBuff.push_back('\t');
 		}
+	}
+
+	inline void startArray(const std::string& field) {
+		writeFieldName(field);
+		startArray();
 	}
 
 	void endArray() {

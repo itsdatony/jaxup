@@ -86,8 +86,7 @@ public:
 		} else if (this->type == JsonNodeType::VALUE_NUMBER_FLOAT) {
 			return static_cast<int64_t>(this->value.d);
 		}
-		//TODO:
-		throw JsonException("Invalid type");
+		throw JsonException("Attempted to read non-numeric JSON node as an integer");
 	}
 
 	inline int64_t asInteger(int64_t defaultValue) const {
@@ -110,8 +109,16 @@ public:
 		this->value.i = newValue;
 	}
 
+	inline void operator = (int64_t newValue) {
+		setInteger(newValue);
+	}
+
+	inline void operator = (int32_t newValue) {
+		setInteger(newValue);
+	}
+
 	inline void setInteger(const std::string& key, int64_t newValue) {
-		(*this)(key).setInteger(newValue);
+		(*this)[key].setInteger(newValue);
 	}
 
 	double asDouble() const {
@@ -120,8 +127,7 @@ public:
 		} else if (this->type == JsonNodeType::VALUE_NUMBER_INT) {
 			return static_cast<double>(this->value.i);
 		}
-		//TODO:
-		throw JsonException("Invalid type");
+		throw JsonException("Attempted to read non-numeric JSON node as a double");
 	}
 
 	inline double asDouble(double defaultValue) const {
@@ -144,8 +150,12 @@ public:
 		this->value.d = newValue;
 	}
 
+	inline void operator = (double newValue) {
+		setDouble(newValue);
+	}
+
 	inline void setDouble(const std::string& key, double newValue) {
-		(*this)(key).setDouble(newValue);
+		(*this)[key].setDouble(newValue);
 	}
 
 	bool asBoolean() const {
@@ -154,8 +164,7 @@ public:
 		} else if (this->type == JsonNodeType::VALUE_FALSE) {
 			return false;
 		}
-		//TODO:
-		throw JsonException("Invalid type");
+		throw JsonException("Attempted to read non-boolean JSON node as a boolean");
 	}
 
 	inline bool asBoolean(bool defaultValue) const {
@@ -177,16 +186,19 @@ public:
 		setType(newValue ? JsonNodeType::VALUE_TRUE : JsonNodeType::VALUE_FALSE);
 	}
 
+	inline void operator = (bool newValue) {
+		setBoolean(newValue);
+	}
+
 	inline void setBoolean(const std::string& key, bool newValue) {
-		(*this)(key).setBoolean(newValue);
+		(*this)[key].setBoolean(newValue);
 	}
 
 	const std::string& asString() const {
 		if (this->type == JsonNodeType::VALUE_STRING) {
 			return *this->value.str;
 		}
-		//TODO:
-		throw JsonException("Invalid type");
+		throw JsonException("Attempted to read non-string JSON node as a string");
 	}
 
 	inline const std::string& asString(const std::string& defaultValue) const {
@@ -209,8 +221,12 @@ public:
 		new (&this->value.str) StrPtr(new std::string(newValue));
 	}
 
+	inline void operator = (const std::string& newValue) {
+		setString(newValue);
+	}
+
 	inline void setString(const std::string& key, const std::string& newValue) {
-		(*this)(key).setString(newValue);
+		(*this)[key].setString(newValue);
 	}
 
 	bool isNull() const {
@@ -219,6 +235,10 @@ public:
 
 	void makeNull() {
 		setType(JsonNodeType::VALUE_NULL);
+	}
+
+	inline void operator = (std::nullptr_t) {
+		makeNull();
 	}
 
 	void makeArray() {
@@ -237,7 +257,7 @@ public:
 		return this->value.array->at(n);
 	}
 
-	JsonNode& operator()(size_t n) {
+	JsonNode& operator[](size_t n) {
 		if (this->type != JsonNodeType::VALUE_ARRAY) {
 			makeArray();
 		}
@@ -280,7 +300,7 @@ public:
 		return nullNode;
 	}
 
-	JsonNode& operator()(const std::string& key) {
+	JsonNode& operator[](const std::string& key) {
 		if (this->type != JsonNodeType::VALUE_OBJECT) {
 			makeObject();
 		}
