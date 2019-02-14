@@ -23,6 +23,7 @@
 #ifndef JAXUP_PARSER_H
 #define JAXUP_PARSER_H
 
+#include <cstdint>
 #include <iostream>
 #include <vector>
 
@@ -374,7 +375,7 @@ private:
 	}
 
 	JsonToken parsePositiveNumber(char c) {
-		static const uint64_t bigInt = (uint64_t)std::numeric_limits<int64_t>::max() / 10;
+		static const uint64_t bigInt = (uint64_t)(INT64_MAX) / 10;
 		if (c == '0') {
 			if (peekNextCharacter(&c) && isDigit(c)) {
 				throw JsonException("Leading zeroes are not allowed");
@@ -462,7 +463,7 @@ private:
 
 		if (!rounded) {
 			// Decide if number fits in a int64_t
-			if (decimalExponent == 0 && significand <= static_cast<uint64_t>(std::numeric_limits<int64_t>::max())) {
+			if (decimalExponent == 0 && significand <= static_cast<uint64_t>(INT64_MAX)) {
 				this->int64Value = significand;
 				return foundToken(JsonToken::VALUE_NUMBER_INT);
 			}

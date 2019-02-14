@@ -16,19 +16,14 @@ elseif(${MSVC})
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4 /WX")
 endif()
 
-add_library(jaxup INTERFACE)
-target_include_directories(jaxup INTERFACE include/)
+include_directories(include/)
 
 add_executable(fastParse src/main.cpp)
-target_link_libraries(fastParse jaxup)
 
 add_executable(uglify src/uglify.cpp)
-target_link_libraries(uglify jaxup)
 
 add_executable(doubleWriter src/doubleWriter.cpp)
-target_link_libraries(doubleWriter jaxup)
 
 add_executable(nodeCopy src/nodeCopy.cpp)
-target_link_libraries(nodeCopy jaxup)
 
 install(DIRECTORY include/ DESTINATION include/jaxup FILES_MATCHING PATTERN "*.h")

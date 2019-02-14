@@ -101,22 +101,17 @@ private:
 	static constexpr uint64_t significandMask = 0x000FFFFFFFFFFFFF;
 	static constexpr uint64_t impliedBitOffset = 1ULL << significandSizeBits;
 
-	typedef union {
-		double dub;
-		uint64_t u64;
-	} DoubleConverter;
-
 	static_assert(sizeof(double) == sizeof(uint64_t), "Double precision floating point values are expected to be 64-bits wide");
 	inline uint64_t doubleAsU64(const double d) const {
-		DoubleConverter converter;
-		converter.dub = d;
-		return converter.u64;
+		uint64_t u64;
+		std::memcpy(&u64, &d, sizeof(d));
+		return u64;
 	}
 
 	inline double u64AsDouble(const uint64_t u64) const {
-		DoubleConverter converter;
-		converter.u64 = u64;
-		return converter.dub;
+		double d;
+		std::memcpy(&d, &u64, sizeof(u64));
+		return d;
 	}
 
 	inline constexpr uint64_t top32(uint64_t val) const {
