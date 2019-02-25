@@ -28,6 +28,7 @@
 using namespace jaxup;
 
 int main(int /*argc*/, char* argv[]) {
+	int error = 0;
 	auto start = std::chrono::high_resolution_clock::now();
 	//std::ifstream inputFile(argv[1]);
 	FILE* inputFile = fopen(argv[1], "r");
@@ -44,6 +45,7 @@ int main(int /*argc*/, char* argv[]) {
 		}
 	} catch (const JsonException& e) {
 		std::cerr << "Failed to parse file: " << e.what() << std::endl;
+		error = -1;
 	}
 
 	auto end = std::chrono::high_resolution_clock::now();
@@ -53,5 +55,5 @@ int main(int /*argc*/, char* argv[]) {
 	std::cout << "Microseconds: " << duration << std::endl;
 	std::cout << "Total token count: " << i << std::endl;
 
-	return 0;
+	return error;
 }

@@ -156,6 +156,7 @@ public:
 
 	JsonToken nextToken() {
 		char c;
+		bool comma = false;
 		if (this->token == JsonToken::FIELD_NAME) {
 			getNextSignificantCharacter(&c);
 			if (c != ':') {
@@ -170,6 +171,7 @@ public:
 			case '}':
 				return parseCloseObject();
 			case ',':
+				comma = true;
 				break;
 			default:
 				throw JsonException(
@@ -180,7 +182,7 @@ public:
 		if (this->token != JsonToken::FIELD_NAME && !this->tagStack.empty() && this->tagStack.back() == JsonToken::START_OBJECT) {
 			getNextSignificantCharacter(&c);
 			if (c == '}') {
-				return parseCloseObject();
+				return parseCloseObject(comma);
 			}
 			// Expect a field name next
 			if (c != '"') {
@@ -229,14 +231,21 @@ public:
 				tagStack.push_back(JsonToken::START_OBJECT);
 				return foundToken(JsonToken::START_OBJECT);
 			case '}':
-				return parseCloseObject();
+				return parseCloseObject(comma);
 			case '[':
 				tagStack.push_back(JsonToken::START_ARRAY);
 				return foundToken(JsonToken::START_ARRAY);
 			case ']':
-				return parseCloseArray();
+				return parseCloseArray(comma);
 			default:
 				throw JsonException("Invalid token");
+			}
+		}
+		if (!this->tagStack.empty()) {
+			if (tagStack.back() == JsonToken::START_OBJECT) {
+				throw JsonException("Failed to close object at end of stream");
+			} else {
+				throw JsonException("Failed to close array at end of stream");
 			}
 		}
 		return foundToken(JsonToken::NOT_AVAILABLE);
@@ -340,7 +349,10 @@ private:
 		return code;
 	}
 
-	inline JsonToken parseCloseArray() {
+	inline JsonToken parseCloseArray(bool comma = false) {
+		if (comma) {
+			throw JsonException("Invalid trailing comma in array");
+		}
 		if (tagStack.empty()) {
 			throw JsonException("Tag underflow");
 		}
@@ -351,7 +363,10 @@ private:
 		return foundToken(JsonToken::END_ARRAY);
 	}
 
-	inline JsonToken parseCloseObject() {
+	inline JsonToken parseCloseObject(bool comma = false) {
+		if (comma) {
+			throw JsonException("Invalid trailing comma in object");
+		}
 		if (tagStack.empty()) {
 			throw JsonException("Tag underflow");
 		}
@@ -408,8 +423,11 @@ private:
 
 		if (c == '.') {
 			advanceAndPeekNextCharacter(&c);
+			if (!isDigit(c)) {
+				throw JsonException("Expected digit after decimal point");
+			}
 			if (!rounded) {
-				while (isDigit(c)) {
+				do {
 					if (significand >= bigInt) {
 						if (significand != bigInt || c > '7') {
 							rounded = true;
@@ -422,7 +440,7 @@ private:
 					significand = significand * 10 + getIntFromChar(c);
 					--decimalExponent;
 					advanceAndPeekNextCharacter(&c);
-				}
+				} while (isDigit(c));
 			}
 			// Eat remaining digits
 			while (isDigit(c)) {
