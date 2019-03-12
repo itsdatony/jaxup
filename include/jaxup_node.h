@@ -40,8 +40,7 @@ enum class JsonNodeType {
 	VALUE_STRING,
 	VALUE_NUMBER_INT,
 	VALUE_NUMBER_FLOAT,
-	VALUE_TRUE,
-	VALUE_FALSE,
+	VALUE_BOOLEAN,
 	VALUE_NULL
 };
 
@@ -159,10 +158,8 @@ public:
 	}
 
 	bool asBoolean() const {
-		if (this->type == JsonNodeType::VALUE_TRUE) {
-			return true;
-		} else if (this->type == JsonNodeType::VALUE_FALSE) {
-			return false;
+		if (this->type == JsonNodeType::VALUE_BOOLEAN) {
+			return this->value.b;
 		}
 		throw JsonException("Attempted to read non-boolean JSON node as a boolean");
 	}
@@ -183,7 +180,8 @@ public:
 	}
 
 	void setBoolean(bool newValue) {
-		setType(newValue ? JsonNodeType::VALUE_TRUE : JsonNodeType::VALUE_FALSE);
+		setType(JsonNodeType::VALUE_BOOLEAN);
+		this->value.b = newValue;
 	}
 
 	inline void operator = (bool newValue) {
@@ -344,11 +342,8 @@ public:
 		case JsonNodeType::VALUE_NULL:
 			generator.write(nullptr);
 			break;
-		case JsonNodeType::VALUE_TRUE:
-			generator.write(true);
-			break;
-		case JsonNodeType::VALUE_FALSE:
-			generator.write(false);
+		case JsonNodeType::VALUE_BOOLEAN:
+			generator.write(value.b);
 			break;
 		case JsonNodeType::VALUE_STRING:
 			generator.write(*value.str);
@@ -437,6 +432,7 @@ private:
 		~Value() {}
 		int64_t i;
 		double d;
+		bool b;
 		StrPtr str;
 		ArrayPtr array;
 		ObjectPtr object;
