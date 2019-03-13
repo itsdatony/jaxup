@@ -76,13 +76,6 @@ private:
 	std::string prettyBuff = "\n";
 	bool prettyPrint;
 
-	void flush() {
-		if (outputSize > 0) {
-			output.write(outputBuffer, outputSize);
-			outputSize = 0;
-		}
-	}
-
 	inline void writeBuff(char c) {
 		if (outputSize >= initialBuffSize) {
 			flush();
@@ -229,6 +222,13 @@ public:
 
 	~JsonGenerator() {
 		flush();
+	}
+
+	void flush() {
+		if (outputSize > 0) {
+			output.write(outputBuffer, outputSize);
+			outputSize = 0;
+		}
 	}
 
 	void write(double value) {

@@ -319,6 +319,28 @@ public:
 		return this->value.object->back().second;
 	}
 
+	const std::pair<const std::string&, const JsonNode&> getField(size_t n) const {
+		if (this->type != JsonNodeType::VALUE_OBJECT) {
+			throw JsonException("Attempted to get a field out of a JSON node that is not an object");
+		}
+		if (n > this->value.object->size()) {
+			throw JsonException("Attempted to get a JSON field that does not exist");
+		}
+		auto& val = this->value.object->at(n);
+		return {val.first, val.second};
+	}
+
+	std::pair<const std::string&, JsonNode&> getField(size_t n) {
+		if (this->type != JsonNodeType::VALUE_OBJECT) {
+			throw JsonException("Attempted to get a field out of a JSON node that is not an object");
+		}
+		if (n > this->value.object->size()) {
+			throw JsonException("Attempted to get a JSON field that does not exist");
+		}
+		auto& val = this->value.object->at(n);
+		return {val.first, val.second};
+	}
+
 	size_t size() const {
 		switch (this->type) {
 		case JsonNodeType::VALUE_ARRAY:
@@ -454,6 +476,53 @@ private:
 		type = newType;
 	}
 };
+
+template <typename T>
+class JsonNodeIterator {
+public:
+	JsonNodeIterator(T* node, size_t i = 0) : node(node), i(i) {}
+
+	bool operator != (JsonNodeIterator& rhs) const {
+		return rhs.node != node || rhs.i != i;
+	}
+
+	void operator++() {
+		++i;
+	}
+
+	std::pair<const std::string&, T&> operator*() const {
+		if (node->getType() == JsonNodeType::VALUE_ARRAY) {
+			static const std::string dummyString;
+			return {dummyString, (*node)[i]};
+		} else {
+			return node->getField(i);
+		}
+	}
+
+	std::pair<const std::string&, T&> operator->() const {
+		if (node->getType() == JsonNodeType::VALUE_ARRAY) {
+			static const std::string dummyString;
+			return {dummyString, (*node)[i]};
+		} else {
+			return node->getField(i);
+		}
+	}
+
+private:
+	T* node;
+	size_t i;
+};
+
+template<typename T>
+inline JsonNodeIterator<T> begin(T& node) {
+	return JsonNodeIterator<T>(&node);
+}
+
+template<typename T>
+inline JsonNodeIterator<T> end(T& node) {
+	return JsonNodeIterator<T>(&node, node.size());
+}
+
 }
 
 #endif
