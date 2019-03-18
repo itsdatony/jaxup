@@ -257,7 +257,7 @@ private:
 		long code;
 		char c = 0;
 		int runStart;
-		while (true) {
+		for (;;) {
 			runStart = inputOffset;
 			while (inputOffset < inputSize) {
 				c = inputBuffer[inputOffset];

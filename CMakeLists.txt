@@ -13,7 +13,7 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
 	set(CMAKE_CXX_FLAGS "-Wall -Werror -Wextra ${CMAKE_CXX_FLAGS}")
 elseif(${MSVC})
 	add_definitions(-D_CRT_SECURE_NO_WARNINGS)
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4 /WX")
+	set(CMAKE_CXX_FLAGS "/W4 /WX /EHsc ${CMAKE_CXX_FLAGS}")
 endif()
 
 include_directories(include/)
