@@ -65,6 +65,9 @@ public:
 		case JsonNodeType::VALUE_NUMBER_FLOAT:
 			value.d = rhs.value.d;
 			break;
+		case JsonNodeType::VALUE_BOOLEAN:
+			value.b = rhs.value.b;
+			break;
 		default:
 			value.i = 0;
 		}
@@ -219,7 +222,16 @@ public:
 		new (&this->value.str) StrPtr(new std::string(newValue));
 	}
 
+	void setString(const char* newValue) {
+		setType(JsonNodeType::VALUE_STRING);
+		new (&this->value.str) StrPtr(new std::string(newValue));
+	}
+
 	inline void operator = (const std::string& newValue) {
+		setString(newValue);
+	}
+
+	inline void operator = (const char* newValue) {
 		setString(newValue);
 	}
 
