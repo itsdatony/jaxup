@@ -119,6 +119,10 @@ public:
 		setInteger(newValue);
 	}
 
+	inline void operator = (uint32_t newValue) {
+		setInteger(newValue);
+	}
+
 	inline void setInteger(const std::string& key, int64_t newValue) {
 		(*this)[key].setInteger(newValue);
 	}
