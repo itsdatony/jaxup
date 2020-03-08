@@ -328,7 +328,6 @@ private:
 				throw JsonException("Unescaped control character");
 			}
 		}
-		throw JsonException("String was not terminated");
 	}
 
 	inline long parseHexcode() {
