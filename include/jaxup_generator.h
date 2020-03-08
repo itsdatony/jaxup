@@ -290,7 +290,7 @@ public:
 
 	void writeFieldName(const std::string& field) {
 		if (tagStack.empty() || tagStack.back() != JsonToken::START_OBJECT) {
-			throw JsonException("Tried to write a field name outside of an object");
+			throw JsonException("Tried to write a field name outside of an object: ", field);
 		}
 		if (token != JsonToken::START_OBJECT) {
 			writeBuff(',');

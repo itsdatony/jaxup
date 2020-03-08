@@ -44,6 +44,27 @@ enum class JsonNodeType {
 	VALUE_NULL
 };
 
+static inline std::string getNodeTypeAsString(JsonNodeType t) {
+	switch(t) {
+	case JsonNodeType::VALUE_OBJECT:
+		return "Object";
+	case JsonNodeType::VALUE_ARRAY:
+		return "Array";
+	case JsonNodeType::VALUE_STRING:
+		return "String";
+	case JsonNodeType::VALUE_NUMBER_INT:
+		return "Integer";
+	case JsonNodeType::VALUE_NUMBER_FLOAT:
+		return "Double";
+	case JsonNodeType::VALUE_BOOLEAN:
+		return "Boolean";
+	case JsonNodeType::VALUE_NULL:
+		return "Null";
+	default:
+		return "Unknown";
+	}
+}
+
 class JsonNode {
 public:
 	JsonNode() = default;
@@ -82,13 +103,17 @@ public:
 		return type;
 	}
 
+	inline bool isNumeric() const {
+		return this->type == JsonNodeType::VALUE_NUMBER_INT || this->type == JsonNodeType::VALUE_NUMBER_FLOAT;
+	}
+
 	int64_t asInteger() const {
 		if (this->type == JsonNodeType::VALUE_NUMBER_INT) {
 			return this->value.i;
 		} else if (this->type == JsonNodeType::VALUE_NUMBER_FLOAT) {
 			return static_cast<int64_t>(this->value.d);
 		}
-		throw JsonException("Attempted to read non-numeric JSON node as an integer");
+		throw JsonException("Attempted to read JSON ", getNodeTypeAsString(this->type), " node as an Integer");
 	}
 
 	inline int64_t asInteger(int64_t defaultValue) const {
@@ -99,11 +124,21 @@ public:
 	}
 
 	inline int64_t getInteger(const std::string& key) const {
-		return (*this)[key].asInteger();
+		const auto& node = (*this)[key];
+		if (!node.isNumeric()) {
+			throw JsonException("Attempted to read field \"", key, "\" as an Integer, but it is of type ", getNodeTypeAsString(node.type));
+		}
+		return node.asInteger();
 	}
 
 	inline int64_t getInteger(const std::string& key, int64_t defaultValue) const {
-		return (*this)[key].asInteger(defaultValue);
+		const auto& node = (*this)[key];
+		if (node.isNull()) {
+			return defaultValue;
+		} else if (!node.isNumeric()) {
+			throw JsonException("Attempted to read field \"", key, "\" as an Integer, but it is of type ", getNodeTypeAsString(node.type));
+		}
+		return node.asInteger();
 	}
 
 	void setInteger(int64_t newValue) {
@@ -133,7 +168,7 @@ public:
 		} else if (this->type == JsonNodeType::VALUE_NUMBER_INT) {
 			return static_cast<double>(this->value.i);
 		}
-		throw JsonException("Attempted to read non-numeric JSON node as a double");
+		throw JsonException("Attempted to read JSON ", getNodeTypeAsString(this->type), " node as a Double");
 	}
 
 	inline double asDouble(double defaultValue) const {
@@ -144,11 +179,21 @@ public:
 	}
 
 	inline double getDouble(const std::string& key) const {
-		return (*this)[key].asDouble();
+		const auto& node = (*this)[key];
+		if (!node.isNumeric()) {
+			throw JsonException("Attempted to read field \"", key, "\" as a Double, but it is of type ", getNodeTypeAsString(node.type));
+		}
+		return node.asDouble();
 	}
 
 	inline double getDouble(const std::string& key, double defaultValue) const {
-		return (*this)[key].asDouble(defaultValue);
+		const auto& node = (*this)[key];
+		if (node.isNull()) {
+			return defaultValue;
+		} else if (!node.isNumeric()) {
+			throw JsonException("Attempted to read field \"", key, "\" as a Double, but it is of type ", getNodeTypeAsString(node.type));
+		}
+		return node.asDouble();
 	}
 
 	void setDouble(double newValue) {
@@ -168,7 +213,7 @@ public:
 		if (this->type == JsonNodeType::VALUE_BOOLEAN) {
 			return this->value.b;
 		}
-		throw JsonException("Attempted to read non-boolean JSON node as a boolean");
+		throw JsonException("Attempted to read JSON ", getNodeTypeAsString(this->type), " node as a Boolean");
 	}
 
 	inline bool asBoolean(bool defaultValue) const {
@@ -179,11 +224,21 @@ public:
 	}
 
 	inline bool getBoolean(const std::string& key) const {
-		return (*this)[key].asBoolean();
+		const auto& node = (*this)[key];
+		if (node.type != JsonNodeType::VALUE_BOOLEAN) {
+			throw JsonException("Attempted to read field \"", key, "\" as a Boolean, but it is of type ", getNodeTypeAsString(node.type));
+		}
+		return node.asBoolean();
 	}
 
 	inline bool getBoolean(const std::string& key, bool defaultValue) const {
-		return (*this)[key].asBoolean(defaultValue);
+		const auto& node = (*this)[key];
+		if (node.type == JsonNodeType::VALUE_NULL) {
+			return defaultValue;
+		} else if (node.type != JsonNodeType::VALUE_BOOLEAN) {
+			throw JsonException("Attempted to read field \"", key, "\" as a Boolean, but it is of type ", getNodeTypeAsString(node.type));
+		}
+		return node.asBoolean();
 	}
 
 	void setBoolean(bool newValue) {
@@ -203,7 +258,7 @@ public:
 		if (this->type == JsonNodeType::VALUE_STRING) {
 			return *this->value.str;
 		}
-		throw JsonException("Attempted to read non-string JSON node as a string");
+		throw JsonException("Attempted to read JSON ", getNodeTypeAsString(this->type), " node as a String");
 	}
 
 	inline const std::string& asString(const std::string& defaultValue) const {
@@ -214,11 +269,21 @@ public:
 	}
 
 	inline const std::string& getString(const std::string& key) const {
-		return (*this)[key].asString();
+		const auto& node = (*this)[key];
+		if (node.type != JsonNodeType::VALUE_STRING) {
+			throw JsonException("Attempted to read field \"", key, "\" as a String, but it is of type ", getNodeTypeAsString(node.type));
+		}
+		return node.asString();
 	}
 
 	inline const std::string& getString(const std::string& key, const std::string& defaultValue) const {
-		return (*this)[key].asString(defaultValue);
+		const auto& node = (*this)[key];
+		if (node.type == JsonNodeType::VALUE_NULL) {
+			return defaultValue;
+		} else if (node.type != JsonNodeType::VALUE_STRING) {
+			throw JsonException("Attempted to read field \"", key, "\" as a String, but it is of type ", getNodeTypeAsString(node.type));
+		}
+		return node.asString();
 	}
 
 	void setString(const std::string& newValue) {
@@ -342,10 +407,10 @@ public:
 
 	const std::pair<const std::string&, const JsonNode&> getField(size_t n) const {
 		if (this->type != JsonNodeType::VALUE_OBJECT) {
-			throw JsonException("Attempted to get a field out of a JSON node that is not an object");
+			throw JsonException("Attempted to get a field out of a JSON ", getNodeTypeAsString(this->type), " node");
 		}
 		if (n > this->value.object->size()) {
-			throw JsonException("Attempted to get a JSON field that does not exist");
+			throw JsonException("Attempted to get a JSON field by index, but the index is out of range");
 		}
 		auto& val = this->value.object->at(n);
 		return {val.first, val.second};
@@ -353,10 +418,10 @@ public:
 
 	std::pair<const std::string&, JsonNode&> getField(size_t n) {
 		if (this->type != JsonNodeType::VALUE_OBJECT) {
-			throw JsonException("Attempted to get a field out of a JSON node that is not an object");
+			throw JsonException("Attempted to get a field out of a JSON ", getNodeTypeAsString(this->type), " node");
 		}
 		if (n > this->value.object->size()) {
-			throw JsonException("Attempted to get a JSON field that does not exist");
+			throw JsonException("Attempted to get a JSON field by index, but the index is out of range");
 		}
 		auto& val = this->value.object->at(n);
 		return {val.first, val.second};

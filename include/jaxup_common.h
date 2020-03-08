@@ -24,6 +24,7 @@
 #define JAXUP_COMMON_H
 
 #include <exception>
+#include <string>
 
 namespace jaxup {
 
@@ -44,16 +45,59 @@ enum class JsonToken {
 	VALUE_NULL
 };
 
+static inline std::string getTokenAsString(JsonToken t) {
+	switch(t) {
+	case JsonToken::NOT_AVAILABLE:
+		return "Not Available";
+	case JsonToken::START_OBJECT:
+		return "Start Object ({)";
+	case JsonToken::END_OBJECT:
+		return "End Object (})";
+	case JsonToken::START_ARRAY:
+		return "Start Array ([)";
+	case JsonToken::END_ARRAY:
+		return "End Array (])";
+	case JsonToken::FIELD_NAME:
+		return "Field Name";
+	case JsonToken::VALUE_STRING:
+		return "String";
+	case JsonToken::VALUE_NUMBER_INT:
+		return "Integer";
+	case JsonToken::VALUE_NUMBER_FLOAT:
+		return "Double";
+	case JsonToken::VALUE_TRUE:
+		return "True";
+	case JsonToken::VALUE_FALSE:
+		return "False";
+	case JsonToken::VALUE_NULL:
+		return "Null";
+	default:
+		return "Unknown";
+	}
+}
+
 class JsonException : public std::exception {
 public:
-	JsonException(const char* what) : text(what) {
+	JsonException(const std::string& text) : text(text) {
 	}
+
+	template<typename... Args>
+	JsonException(const std::string& first, Args... rest) : text(getCombinedString(first, rest...)) {}
+
 	const char* what() const noexcept override {
-		return text;
+		return text.c_str();
 	}
 
 private:
-	const char* text;
+	const std::string text;
+
+	template<typename... Args>
+	static std::string getCombinedString(const std::string& first, Args... rest) {
+		return first + getCombinedString(rest...);
+	}
+	static std::string getCombinedString(const std::string& first) {
+		return first;
+	}
 };
 }
 

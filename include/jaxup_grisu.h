@@ -293,23 +293,23 @@ inline void grisu2(const double d, char* buffer, int& length, int& powTen) {
 	generateDigits(wPlus, wPlus.mantissa - wMinus.mantissa, buffer, length, powTen);
 }
 
-inline int writeExponent(char* buffer, int powTen) {
-	if (powTen < 0) {
+inline int writeSmallInteger(char* buffer, int integer) {
+	if (integer < 0) {
 		buffer[0] = '-';
-		return 1 + writeExponent(buffer + 1, -powTen);
+		return 1 + writeSmallInteger(buffer + 1, -integer);
 	}
-	if (powTen >= 100) {
-		buffer[0] = digitToAscii(powTen / 100);
-		powTen %= 100;
-		buffer[1] = digitToAscii(powTen / 10);
-		buffer[2] = digitToAscii(powTen % 10);
+	if (integer >= 100) {
+		buffer[0] = digitToAscii(integer / 100);
+		integer %= 100;
+		buffer[1] = digitToAscii(integer / 10);
+		buffer[2] = digitToAscii(integer % 10);
 		return 3;
-	} else if (powTen >= 10) {
-		buffer[0] = digitToAscii(powTen / 10);
-		buffer[1] = digitToAscii(powTen % 10);
+	} else if (integer >= 10) {
+		buffer[0] = digitToAscii(integer / 10);
+		buffer[1] = digitToAscii(integer % 10);
 		return 2;
 	} else {
-		buffer[0] = digitToAscii(powTen);
+		buffer[0] = digitToAscii(integer);
 		return 1;
 	}
 }
@@ -346,13 +346,13 @@ inline int conformalizeNumberString(char* buffer, int length, int powTen) {
 	// Use scientific notation
 	if (length == 1) {
 		buffer[1] = 'e';
-		return 2 + writeExponent(&buffer[2], powTen);
+		return 2 + writeSmallInteger(&buffer[2], powTen);
 	} else {
 		// make room for conventional decimal and then insert it
 		std::memmove(&buffer[2], &buffer[1], length - 1);
 		buffer[1] = '.';
 		buffer[length + 1] = 'e';
-		return length + 2 + writeExponent(&buffer[length + 2], totalPowTen - 1);
+		return length + 2 + writeSmallInteger(&buffer[length + 2], totalPowTen - 1);
 	}
 }
 

@@ -114,7 +114,7 @@ public:
 		} else if (this->token == JsonToken::VALUE_NUMBER_FLOAT) {
 			return static_cast<int64_t>(this->doubleValue);
 		}
-		throw JsonException("Attempted to parse a non-numeric JSON token as an integer");
+		throw JsonException("Attempted to parse a ", getTokenAsString(this->token), " token as an Integer");
 	}
 
 	double getDoubleValue() const {
@@ -123,7 +123,7 @@ public:
 		} else if (this->token == JsonToken::VALUE_NUMBER_INT) {
 			return static_cast<double>(this->int64Value);
 		}
-		throw JsonException("Attempted to parse a non-numeric JSON token as a double");
+		throw JsonException("Attempted to parse a ", getTokenAsString(this->token), " token as a Double");
 	}
 
 	bool getBooleanValue() const {
@@ -132,7 +132,7 @@ public:
 		} else if (this->token == JsonToken::VALUE_FALSE) {
 			return false;
 		}
-		throw JsonException("Attempted to parse a non-boolean JSON token as a boolean");
+		throw JsonException("Attempted to parse a ", getTokenAsString(this->token), " token as a Boolean");
 	}
 
 	const std::string& getText() const {
@@ -238,7 +238,7 @@ public:
 			case ']':
 				return parseCloseArray(comma);
 			default:
-				throw JsonException("Invalid token");
+				throw JsonException("Invalid token beginning with character: ", std::string(&c, 1));
 			}
 		}
 		if (!this->tagStack.empty()) {
@@ -321,11 +321,12 @@ private:
 					}
 					break;
 				default:
-					throw JsonException("Invalid escape code");
+					throw JsonException("Invalid escape code: \\", std::string(&c, 1));
 				}
 			} else {
-				std::cerr << "Unexpected value " << (int)c << std::endl;
-				throw JsonException("Unescaped control character");
+				char intRep[5] = { 0, 0, 0, 0, 0 };
+				grisu::writeSmallInteger(intRep, (int) c);
+				throw JsonException("Unescaped control character with value: ", intRep);
 			}
 		}
 	}
