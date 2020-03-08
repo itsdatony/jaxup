@@ -231,6 +231,11 @@ public:
 		new (&this->value.str) StrPtr(new std::string(newValue));
 	}
 
+	void setString(const char* newValue, size_t size) {
+		setType(JsonNodeType::VALUE_STRING);
+		new (&this->value.str) StrPtr(new std::string(newValue, size));
+	}
+
 	inline void operator = (const std::string& newValue) {
 		setString(newValue);
 	}
