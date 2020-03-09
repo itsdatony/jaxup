@@ -99,6 +99,55 @@ public:
 		makeNull();
 	}
 
+	void copyFrom(const JsonNode& rhs, size_t maxDepth = 50) {
+		switch (type) {
+		case JsonNodeType::VALUE_OBJECT:
+			if (maxDepth == 0) {
+				throw JsonException("Max depth exceeded while copying Object node");
+			}
+			makeObject();
+			value.object->clear();
+			value.object->reserve(rhs.size());
+			for (const auto& pair : *rhs.value.object) {
+				JsonNode newNode;
+				newNode.copyFrom(pair.second, maxDepth - 1);
+				value.object->emplace_back(pair.first, std::move(newNode));
+			}
+			break;
+		case JsonNodeType::VALUE_ARRAY:
+			if (maxDepth == 0) {
+				throw JsonException("Max depth exceeded while copying Array node");
+			}
+			makeArray();
+			value.array->clear();
+			value.array->reserve(rhs.size());
+			for (const auto& node : *rhs.value.array) {
+				JsonNode newNode;
+				newNode.copyFrom(node, maxDepth - 1);
+				value.array->emplace_back(std::move(newNode));
+			}
+			break;
+		case JsonNodeType::VALUE_STRING:
+			setString(*rhs.value.str);
+			break;
+		case JsonNodeType::VALUE_NUMBER_INT:
+			setInteger(rhs.value.i);
+			break;
+		case JsonNodeType::VALUE_NUMBER_FLOAT:
+			setDouble(rhs.value.d);
+			break;
+		case JsonNodeType::VALUE_BOOLEAN:
+			setBoolean(rhs.value.b);
+			break;
+		default:
+			makeNull();
+		}
+	}
+
+	inline void copyTo(const JsonNode& rhs, size_t maxDepth = 50) const {
+		rhs.copyTo(*this, maxDepth);
+	}
+
 	JsonNodeType getType() const {
 		return type;
 	}
