@@ -439,7 +439,7 @@ public:
 	}
 
 	template <class dest>
-	void write(JsonGenerator<dest>& generator) const {
+	void write(JsonGenerator<dest>& generator, size_t maxDepth = 50) const {
 		switch (type) {
 		case JsonNodeType::VALUE_NUMBER_FLOAT:
 			generator.write(value.d);
@@ -457,17 +457,23 @@ public:
 			generator.write(*value.str);
 			break;
 		case JsonNodeType::VALUE_ARRAY:
+			if (maxDepth == 0) {
+				throw JsonException("Max depth exceeded while writing Array node");
+			}
 			generator.startArray();
 			for (const auto& node : *value.array) {
-				node.write(generator);
+				node.write(generator, maxDepth - 1);
 			}
 			generator.endArray();
 			break;
 		case JsonNodeType::VALUE_OBJECT:
+			if (maxDepth == 0) {
+				throw JsonException("Max depth exceeded while writing Object node");
+			}
 			generator.startObject();
 			for (const auto& pair : *value.object) {
 				generator.writeFieldName(pair.first);
-				pair.second.write(generator);
+				pair.second.write(generator, maxDepth - 1);
 			}
 			generator.endObject();
 			break;
@@ -475,7 +481,7 @@ public:
 	}
 
 	template <class source>
-	void read(JsonParser<source>& parser) {
+	void read(JsonParser<source>& parser, size_t maxDepth = 50) {
 		JsonToken token = parser.currentToken();
 		if (token == JsonToken::NOT_AVAILABLE) {
 			// Give a kick start if the stream hasn't been read from
@@ -502,16 +508,22 @@ public:
 			setString(parser.getText());
 			break;
 		case JsonToken::START_ARRAY: {
+			if (maxDepth == 0) {
+				throw JsonException("Max depth exceeded while parsing Array node");
+			}
 			makeArray();
 			JsonNode newNode;
 			JsonToken current = parser.nextToken();
 			while (current != JsonToken::END_ARRAY && current != JsonToken::NOT_AVAILABLE) {
-				newNode.read(parser);
+				newNode.read(parser, maxDepth - 1);
 				this->value.array->emplace_back(std::move(newNode));
 				current = parser.currentToken();
 			}
 		} break;
 		case JsonToken::START_OBJECT: {
+			if (maxDepth == 0) {
+				throw JsonException("Max depth exceeded while parsing Object node");
+			}
 			makeObject();
 			JsonNode newNode;
 			std::string fieldName;
@@ -519,7 +531,7 @@ public:
 			while (current == JsonToken::FIELD_NAME) {
 				fieldName = parser.getCurrentName();
 				current = parser.nextToken();
-				newNode.read(parser);
+				newNode.read(parser, maxDepth - 1);
 				current = parser.currentToken();
 				this->value.object->emplace_back(fieldName, std::move(newNode));
 			}
