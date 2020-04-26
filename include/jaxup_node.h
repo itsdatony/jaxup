@@ -100,7 +100,7 @@ public:
 	}
 
 	void copyFrom(const JsonNode& rhs, size_t maxDepth = 50) {
-		switch (type) {
+		switch (rhs.type) {
 		case JsonNodeType::VALUE_OBJECT:
 			if (maxDepth == 0) {
 				throw JsonException("Max depth exceeded while copying Object node");
