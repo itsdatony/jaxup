@@ -69,12 +69,6 @@ private:
 	FILE* input;
 };
 
-static inline double getDoubleFromChar(char c) {
-	static const double DIGITS[] = {0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0,
-									8.0, 9.0};
-	return DIGITS[c - '0'];
-}
-
 static inline int getIntFromChar(char c) {
 	return c - '0';
 }
@@ -417,7 +411,6 @@ private:
 		}
 		// Eat remaining digits
 		while (isDigit(c)) {
-			++decimalExponent;
 			advanceAndPeekNextCharacter(&c);
 		}
 
@@ -488,7 +481,7 @@ private:
 			if (decimalExponent > 0 && decimalExponent < 20) {
 				uint64_t power = grisu::getIntegerPowTen(decimalExponent);
 				uint64_t mul = power * significand;
-				if (mul == 0 || mul / power == significand) {
+				if (mul == 0 || ((mul / power == significand) && mul <= static_cast<uint64_t>(INT64_MAX))) {
 					this->int64Value = mul;
 					return foundToken(JsonToken::VALUE_NUMBER_INT);
 				}
