@@ -488,7 +488,10 @@ private:
 			}
 			// Fall through to floating point handling
 		}
-		this->doubleValue = grisu::raiseToPowTen((double)significand, decimalExponent);
+		this->doubleValue = grisu::raiseToPowTen(significand, decimalExponent);
+		if (std::isnan(this->doubleValue)) {
+			throw JsonException("Number does not fit in a double");
+		}
 
 		return foundToken(JsonToken::VALUE_NUMBER_FLOAT);
 	}

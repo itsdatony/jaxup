@@ -26,4 +26,6 @@ add_executable(doubleWriter src/doubleWriter.cpp)
 
 add_executable(nodeCopy src/nodeCopy.cpp)
 
+add_executable(numericTest src/numericTest.cpp)
+
 install(DIRECTORY include/ DESTINATION include/jaxup FILES_MATCHING PATTERN "*.h")
