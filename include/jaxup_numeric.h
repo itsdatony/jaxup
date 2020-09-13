@@ -20,8 +20,8 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
-#ifndef JAXUP_GRISU_H
-#define JAXUP_GRISU_H
+#ifndef JAXUP_NUMERIC_H
+#define JAXUP_NUMERIC_H
 
 #include <cassert>
 #include <cmath>
@@ -30,7 +30,7 @@
 #include <limits>
 
 namespace jaxup {
-namespace grisu {
+namespace numeric {
 
 class ExplodedFloatingPoint {
 public:

@@ -23,9 +23,9 @@
 #include <chrono>
 #include <iostream>
 #include <string>
-#include <jaxup_grisu.h>
+#include <jaxup_numeric.h>
 
-using namespace jaxup::grisu;
+using namespace jaxup::numeric;
 
 void showResult(char buff[], double d) {
 	int len = fastDoubleToString(buff, d);

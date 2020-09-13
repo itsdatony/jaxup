@@ -28,7 +28,7 @@
 #include <vector>
 
 #include "jaxup_common.h"
-#include "jaxup_grisu.h"
+#include "jaxup_numeric.h"
 
 namespace jaxup {
 
@@ -319,7 +319,7 @@ private:
 				}
 			} else {
 				char intRep[5] = { 0, 0, 0, 0, 0 };
-				grisu::writeSmallInteger(intRep, (int) c);
+				numeric::writeSmallInteger(intRep, (int) c);
 				throw JsonException("Unescaped control character with value: ", intRep);
 			}
 		}
@@ -479,7 +479,7 @@ private:
 				return foundToken(JsonToken::VALUE_NUMBER_INT);
 			}
 			if (decimalExponent > 0 && decimalExponent < 20) {
-				uint64_t power = grisu::getIntegerPowTen(decimalExponent);
+				uint64_t power = numeric::getIntegerPowTen(decimalExponent);
 				uint64_t mul = power * significand;
 				if (mul == 0 || ((mul / power == significand) && mul <= static_cast<uint64_t>(INT64_MAX))) {
 					this->int64Value = mul;
@@ -488,7 +488,7 @@ private:
 			}
 			// Fall through to floating point handling
 		}
-		this->doubleValue = grisu::raiseToPowTen(significand, decimalExponent);
+		this->doubleValue = numeric::raiseToPowTen(significand, decimalExponent);
 		if (std::isnan(this->doubleValue)) {
 			throw JsonException("Number does not fit in a double");
 		}

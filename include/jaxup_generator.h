@@ -28,7 +28,7 @@
 #include <vector>
 
 #include "jaxup_common.h"
-#include "jaxup_grisu.h"
+#include "jaxup_numeric.h"
 
 namespace jaxup {
 
@@ -175,7 +175,7 @@ private:
 	}
 
 	inline int writeDoubleToBuff(double value, char* buff) {
-		int len = grisu::fastDoubleToString(buff, value);
+		int len = numeric::fastDoubleToString(buff, value);
 		if (len < 0) {
 			throw JsonException("Failed to serialize double");
 		}
