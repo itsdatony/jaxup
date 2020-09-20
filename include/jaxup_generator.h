@@ -175,7 +175,7 @@ private:
 	}
 
 	inline int writeDoubleToBuff(double value, char* buff) {
-		int len = numeric::fastDoubleToString(buff, value);
+		int len = numeric::ryu(value, buff);
 		if (len < 0) {
 			throw JsonException("Failed to serialize double");
 		}
@@ -183,36 +183,6 @@ private:
 			len = sizeof(doubleBuff);
 		}
 		return len;
-	}
-
-	inline char* writeIntegerToBuff(int64_t value, char* endMarker) {
-		if (value >= 0) {
-			return writeIntegerToBuff((uint64_t)value, endMarker);
-		} else {
-			char* start = writeIntegerToBuff((uint64_t)(0 - value), endMarker);
-			*--start = '-';
-			return start;
-		}
-	}
-
-	inline char* writeIntegerToBuff(uint64_t value, char* endMarker) {
-		static const char digits[] = "00102030405060708090011121314151617181910212223242526272829203132333435363738393041424344454647484940515253545556575859506162636465666768696071727374757677787970818283848586878889809192939495969798999";
-		unsigned int offset;
-		char* start = endMarker;
-		while (value >= 100) {
-			offset = (value % 100) * 2;
-			value = value / 100;
-			*--start = digits[offset];
-			*--start = digits[offset + 1];
-		}
-		if (value < 10) {
-			*--start = '0' + static_cast<char>(value);
-			return start;
-		}
-		offset = static_cast<unsigned int>(value) * 2;
-		*--start = digits[offset];
-		*--start = digits[offset + 1];
-		return start;
 	}
 
 public:
@@ -246,7 +216,7 @@ public:
 	void write(int64_t value) {
 		prepareWriteValue();
 		token = JsonToken::VALUE_NUMBER_INT;
-		char* start = writeIntegerToBuff(value, doubleBuffEndMarker);
+		char* start = numeric::writeIntegerToBuff(value, doubleBuffEndMarker);
 		writeBuff(start, doubleBuffEndMarker - start);
 	}
 

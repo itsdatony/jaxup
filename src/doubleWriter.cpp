@@ -28,7 +28,7 @@
 using namespace jaxup::numeric;
 
 void showResult(char buff[], double d) {
-	int len = fastDoubleToString(buff, d);
+	int len = ryu(d, buff);
 	std::string str(buff, len);
 	std::cout << "str: " << str << ", len: " << len << std::endl;
 }

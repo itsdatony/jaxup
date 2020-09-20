@@ -23,14 +23,47 @@
 #ifndef JAXUP_NUMERIC_H
 #define JAXUP_NUMERIC_H
 
+#include <array>
 #include <cassert>
 #include <cmath>
 #include <cstdint>
 #include <cstring>
 #include <limits>
 
+#include "jaxup_power_tables.h"
+
 namespace jaxup {
 namespace numeric {
+
+inline char* writeIntegerToBuff(int64_t value, char* endMarker) {
+	if (value >= 0) {
+		return writeIntegerToBuff((uint64_t)value, endMarker);
+	} else {
+		char* start = writeIntegerToBuff((uint64_t)(0 - value), endMarker);
+		*--start = '-';
+		return start;
+	}
+}
+
+inline char* writeIntegerToBuff(uint64_t value, char* endMarker) {
+	static const char digits[] = "00102030405060708090011121314151617181910212223242526272829203132333435363738393041424344454647484940515253545556575859506162636465666768696071727374757677787970818283848586878889809192939495969798999";
+	unsigned int offset;
+	char* start = endMarker;
+	while (value >= 100) {
+		offset = (value % 100) * 2;
+		value = value / 100;
+		*--start = digits[offset];
+		*--start = digits[offset + 1];
+	}
+	if (value < 10) {
+		*--start = '0' + static_cast<char>(value);
+		return start;
+	}
+	offset = static_cast<unsigned int>(value) * 2;
+	*--start = digits[offset];
+	*--start = digits[offset + 1];
+	return start;
+}
 
 class ExplodedFloatingPoint {
 public:
@@ -433,6 +466,240 @@ inline int fastDoubleToString(char* buffer, const double d) {
 	grisu2(d, buffer, length, powTen);
 	return conformalizeNumberString(buffer, length, powTen);
 }
+
+static inline constexpr int32_t bitCountOf5ToThe(int pow) {
+	return static_cast<int32_t>(((static_cast<uint32_t>(pow) * 1217359) >> 19) + 1);
+}
+
+static inline constexpr uint64_t top32(uint64_t val) {
+	return val >> 32;
+}
+
+static inline constexpr uint64_t bot32(uint64_t val) {
+	return val & 0xFFFFFFFF;
+}
+
+static inline void full64BitMultiply(uint64_t m1, uint64_t m2, std::array<uint64_t, 2>& out) {
+	uint64_t botL = bot32(m1);
+	uint64_t botR = bot32(m2);
+
+	uint64_t t = (botL * botR);
+	uint64_t w3 = bot32(t);
+	uint64_t k = top32(t);
+
+	m1 = top32(m1);
+	t = (m1 * botR) + k;
+	k = bot32(t);
+	uint64_t w1 = top32(t);
+
+	m2 = top32(m2);
+	t = (botL * m2) + k;
+	k = top32(t);
+
+	out[0] = (m1 * m2) + w1 + k;
+	out[1] = (t << 32) + w3;
+}
+
+static inline uint64_t full64x128MultiplyAndShift(uint64_t m1, const std::array<uint64_t, 2>& m2, uint32_t shift) {
+	assert(shift > 0);
+	assert(shift < 64);
+	std::array<uint64_t, 2> rhigh, rlow;
+	full64BitMultiply(m1, m2[0], rhigh);
+	full64BitMultiply(m1, m2[1], rlow);
+
+	const uint64_t sum = rlow[0] + rhigh[1];
+	rhigh[0] += sum < rlow[0]; // overflow
+	return (sum >> shift) | (rhigh[0] << (64 - shift));
+}
+
+static inline void multiplyAll(const uint64_t& minus, const uint64_t& mid, const uint64_t& plus,
+		const std::array<uint64_t, 2>& multiplier, uint32_t shift,
+		uint64_t& minusOut, uint64_t& midOut, uint64_t& plusOut) {
+	minusOut = full64x128MultiplyAndShift(minus, multiplier, shift);
+	midOut = full64x128MultiplyAndShift(mid, multiplier, shift);
+	plusOut = full64x128MultiplyAndShift(plus, multiplier, shift);
+}
+
+static bool isDivisibleByPowerOf5(uint64_t value, uint32_t power) {
+	while (power-- > 0) {
+		if ((value % 5) != 0) {
+			return false;
+		}
+		value /= 5;
+	}
+	return true;
+}
+
+static inline void computeShortest(uint64_t minus, uint64_t mid, uint64_t plus, uint32_t exponent, bool even,
+		bool minusIsTrailingZeroes, bool midIsTrailingZeroes, uint64_t& out, int32_t& outExponent) {
+	outExponent = exponent;
+	if (minusIsTrailingZeroes || midIsTrailingZeroes) {
+		uint32_t lastRemovedDigit = 0;
+		while (plus / 10 > minus / 10) {
+			minusIsTrailingZeroes &= (minus % 10) == 0;
+			midIsTrailingZeroes &= lastRemovedDigit == 0;
+			lastRemovedDigit = mid % 10;
+			minus /= 10;
+			mid /= 10;
+			plus /= 10;
+			++outExponent;
+		}
+		if (minusIsTrailingZeroes) {
+			while (minus % 10 == 0) {
+				lastRemovedDigit = mid % 10;
+				minus /= 10;
+				mid /= 10;
+				plus /= 10;
+				midIsTrailingZeroes &= lastRemovedDigit == 0;
+				++outExponent;
+			}
+			if (midIsTrailingZeroes && lastRemovedDigit == 5 && mid % 2 == 0) {
+				lastRemovedDigit = 4;
+			}
+		}
+		out = mid + ((mid == minus && (!even || !minusIsTrailingZeroes)) || lastRemovedDigit >= 5);
+		return;
+	}
+
+	bool roundUp = false;
+	if (plus / 100 > minus / 100) {
+		roundUp = (mid % 100) >= 50;
+		minus /= 100;
+		mid /= 100;
+		plus /= 100;
+		outExponent += 2;
+	}
+	while (plus / 10 > minus / 10) {
+		roundUp = (mid % 10) >= 5;
+		minus /= 10;
+		mid /= 10;
+		plus /= 10;
+		++outExponent;
+	}
+	out = mid + (mid == minus || roundUp);
+}
+
+inline int conformalizeNumberString2(char* buffer, char* integer, int length, int powTen) {
+	const int totalPowTen = length + powTen;
+	if (totalPowTen <= 19) {
+		if (powTen >= 0) {
+			std::memcpy(buffer, integer, length);
+			// Whole number with no exponent
+			// add trailing zeros
+			for (int i = length; i < totalPowTen; ++i) {
+				buffer[i] = '0';
+			}
+			return totalPowTen;
+		} else if (totalPowTen > 0) {
+			// Decimal number with no exponent
+			// make room for decimal point and then insert it
+			std::memcpy(buffer, integer, totalPowTen);
+			buffer[totalPowTen] = '.';
+			std::memcpy(buffer + totalPowTen + 1, integer + totalPowTen, length - totalPowTen);
+			return length + 1;
+		} else if (totalPowTen > -6) {
+			// Short decimal < 1
+			// Make room for '0.' + any preceding zeros
+			const int offset = 2 - totalPowTen;
+			buffer[0] = '0';
+			buffer[1] = '.';
+			for (int i = 2; i < offset; ++i) {
+				buffer[i] = '0';
+			}
+			std::memcpy(buffer + offset, integer, length);
+			return offset + length;
+		}
+	}
+	// Use scientific notation
+	if (length == 1) {
+		buffer[0] = integer[0];
+		buffer[1] = 'e';
+		return 2 + writeSmallInteger(&buffer[2], powTen);
+	} else {
+		// make room for conventional decimal and then insert it
+		std::memmove(&buffer[2], &buffer[1], length - 1);
+		buffer[0] = integer[0];
+		buffer[1] = '.';
+		std::memcpy(buffer + 2, integer + 1, length - 1);
+		buffer[length + 1] = 'e';
+		return length + 2 + writeSmallInteger(&buffer[length + 2], totalPowTen - 1);
+	}
+}
+
+inline int ryu(const double d, char* buffer) {
+	if (d == 0.0) {
+		buffer[0] = '0';
+		return 1;
+	}
+	if (std::signbit(d)) {
+		buffer[0] = '-';
+		return 1 + ryu(-d, buffer + 1);
+	}
+	ExplodedFloatingPoint binary(d);
+	bool even = (binary.mantissa & 1) == 0;
+
+	// Shift left so that next highest/lowest floats can be expressed in the same exponent
+	int minusShift = (binary.mantissa != (1ULL << 52)) || (binary.exponent <= 1);
+	uint64_t binaryMid = binary.mantissa << 2;
+	uint64_t binaryPlus = binaryMid + 2;
+	uint64_t binaryMinus = binaryMid - 1 - minusShift;
+	int binaryExponent = binary.exponent - 2;
+
+	uint64_t decimalMid, decimalMinus, decimalPlus;
+	int32_t decimalExponent;
+	bool decimalMidIsTrailingZeros = false, decimalMinusIsTrailingZeros = false;
+	if (binaryExponent >= 0) {
+		// Calculates floor(binaryExponent * log10(2)), or floor(log10(2^binaryExponent))
+		// 78918 / 2^18 approximates log10(2)
+		decimalExponent = ((binaryExponent * 78913) >> 18) - (binaryExponent > 3);
+		int32_t i = decimalExponent - binaryExponent + bitCountOf5ToThe(decimalExponent) - 1 + 125;
+
+		multiplyAll(binaryMinus, binaryMid, binaryPlus, negativePowerTable[decimalExponent], i,
+			decimalMinus, decimalMid, decimalPlus);
+
+		if (decimalExponent <= 21) {
+			if (binaryMinus % 5 == 0) {
+				decimalMidIsTrailingZeros = isDivisibleByPowerOf5(binaryMid, decimalExponent);
+			} else if (even) {
+				decimalMinusIsTrailingZeros = isDivisibleByPowerOf5(binaryMinus, decimalExponent);
+			} else {
+				--decimalPlus;
+			}
+		}
+	} else {
+		// binaryExponent < 0
+		// Calculates floor(-binaryExponent * log10(5)), or floor(log10(5^(-binaryExponent)))
+		// 732923 / 2^20 approximates log10(5)
+		int32_t q = ((-binaryExponent * 732923) >> 20) - (binaryExponent < -1);
+		decimalExponent = q + binaryExponent;
+		int32_t i = -decimalExponent;
+		int32_t b5i = bitCountOf5ToThe(i);
+		int32_t j = q - b5i + 125;
+
+		multiplyAll(binaryMinus, binaryMid, binaryPlus, positivePowerTable[i], j,
+			decimalMinus, decimalMid, decimalPlus);
+
+		if (q <= 1) {
+			decimalMidIsTrailingZeros = true;
+			if (even) {
+				decimalMinusIsTrailingZeros = minusShift;
+			} else {
+				--decimalPlus;
+			}
+		} else if (q < 63) {
+			decimalMidIsTrailingZeros = (binaryMid & ((1ULL << (q - 1)) - 1)) == 0;
+		}
+	}
+
+	uint64_t out;
+	computeShortest(decimalMinus, decimalMid, decimalPlus, decimalExponent, even,
+		decimalMinusIsTrailingZeros, decimalMidIsTrailingZeros, out, decimalExponent);
+	char integerBuff[17];
+	char* start = writeIntegerToBuff(out, integerBuff + sizeof(integerBuff));
+	int32_t length = sizeof(integerBuff) - (start - integerBuff);
+	return conformalizeNumberString2(buffer, start, length, decimalExponent);
+}
+
 }
 }
 
