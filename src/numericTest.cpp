@@ -130,8 +130,29 @@ int main(int /*argc*/, char* /*argv*/[]) {
 		};
 	}
 
-	std::cout << "Num errors: " << numErrors << std::endl;
-	std::cout << "Num write errors: " << numWriteErrors << std::endl;
-	std::cout << "Num read errors: " << numReadErrors << std::endl;
-	std::cout << "Num both errors: " << numBothErrors << std::endl;
+	std::cout << "Num double write errors: " << numWriteErrors << std::endl;
+	std::cout << "Num double read errors: " << numReadErrors << std::endl;
+	std::cout << "Num double both errors: " << numBothErrors << std::endl;
+
+	int64_t intTestCases[] = {
+		0, 1, -1, 101, std::numeric_limits<int64_t>::max(), std::numeric_limits<int64_t>::min()
+	};
+
+	numWriteErrors = 0;
+	char buffer[21];
+	buffer[20] = '\0';
+	for (const auto& integer : intTestCases) {
+		char* start = jaxup::numeric::writeIntegerToBuff(integer, buffer + sizeof(buffer) - 1);
+		int64_t read;
+		if (std::sscanf(start, "%ld", &read) != 1 || read != integer) {
+			std::cout << "Failed to write: " << integer << std::endl;
+			++numWriteErrors;
+			++numErrors;
+		}
+	}
+
+	std::cout << "Num integer write errors: " << numWriteErrors << std::endl;
+	std::cout << "Total num errors: " << numErrors << std::endl;
+
+	return numErrors;
 }
