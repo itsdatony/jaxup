@@ -57,9 +57,9 @@ inline char* writeUnsignedIntegerToBuff(uint64_t value, char* endMarker) {
 
 inline char* writeIntegerToBuff(int64_t value, char* endMarker) {
 	if (value >= 0) {
-		return writeUnsignedIntegerToBuff((uint64_t)value, endMarker);
+		return writeUnsignedIntegerToBuff(static_cast<uint64_t>(value), endMarker);
 	} else {
-		char* start = writeUnsignedIntegerToBuff((uint64_t)(0 - value), endMarker);
+		char* start = writeUnsignedIntegerToBuff(0 - static_cast<uint64_t>(value), endMarker);
 		*--start = '-';
 		return start;
 	}
