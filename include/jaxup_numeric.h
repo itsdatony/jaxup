@@ -345,8 +345,8 @@ inline int writeSmallInteger(char* buffer, int integer) {
 	}
 }
 
-static inline constexpr int32_t bitCountOf5ToThe(int pow) {
-	return static_cast<int32_t>(((static_cast<uint32_t>(pow) * 1217359) >> 19) + 1);
+static inline constexpr uint32_t bitCountOf5ToThe(int pow) {
+	return ((static_cast<uint32_t>(pow) * 1217359) >> 19) + 1;
 }
 
 static inline constexpr uint64_t top32(uint64_t val) {
@@ -517,11 +517,11 @@ inline int ryu(const double d, char* buffer) {
 	bool even = (binary.mantissa & 1) == 0;
 
 	// Shift left so that next highest/lowest floats can be expressed in the same exponent
-	int minusShift = (binary.mantissa != (1ULL << 52)) || (binary.exponent <= 1);
+	uint32_t minusShift = (binary.mantissa != (1ULL << 52)) || (binary.exponent <= 1);
 	uint64_t binaryMid = binary.mantissa << 2;
 	uint64_t binaryPlus = binaryMid + 2;
 	uint64_t binaryMinus = binaryMid - 1 - minusShift;
-	int binaryExponent = binary.exponent - 2;
+	int32_t binaryExponent = binary.exponent - 2;
 
 	uint64_t decimalMid, decimalMinus, decimalPlus;
 	int32_t decimalExponent;
@@ -529,10 +529,11 @@ inline int ryu(const double d, char* buffer) {
 	if (binaryExponent >= 0) {
 		// Calculates floor(binaryExponent * log10(2)), or floor(log10(2^binaryExponent))
 		// 78918 / 2^18 approximates log10(2)
-		decimalExponent = ((binaryExponent * 78913) >> 18) - (binaryExponent > 3);
-		int32_t i = decimalExponent - binaryExponent + bitCountOf5ToThe(decimalExponent) - 1 + 125;
+		decimalExponent = ((static_cast<uint32_t>(binaryExponent) * 78913) >> 18) - (binaryExponent > 3);
+		uint32_t i = decimalExponent - binaryExponent + bitCountOf5ToThe(decimalExponent) - 1 + 125;
+		uint32_t shift = i - 64;
 
-		multiplyAll(binaryMinus, binaryMid, binaryPlus, negativePowerTable[decimalExponent], i,
+		multiplyAll(binaryMinus, binaryMid, binaryPlus, negativePowerTable[decimalExponent], shift,
 			decimalMinus, decimalMid, decimalPlus);
 
 		if (decimalExponent <= 21) {
@@ -548,13 +549,14 @@ inline int ryu(const double d, char* buffer) {
 		// binaryExponent < 0
 		// Calculates floor(-binaryExponent * log10(5)), or floor(log10(5^(-binaryExponent)))
 		// 732923 / 2^20 approximates log10(5)
-		int32_t q = ((-binaryExponent * 732923) >> 20) - (binaryExponent < -1);
+		uint32_t q = ((static_cast<uint32_t>(-binaryExponent) * 732923) >> 20) - (binaryExponent < -1);
 		decimalExponent = q + binaryExponent;
-		int32_t i = -decimalExponent;
-		int32_t b5i = bitCountOf5ToThe(i);
-		int32_t j = q - b5i + 125;
+		uint32_t i = -decimalExponent;
+		uint32_t b5i = bitCountOf5ToThe(i);
+		uint32_t j = q - b5i + 125;
+		uint32_t shift = j - 64;
 
-		multiplyAll(binaryMinus, binaryMid, binaryPlus, positivePowerTable[i], j,
+		multiplyAll(binaryMinus, binaryMid, binaryPlus, positivePowerTable[i], shift,
 			decimalMinus, decimalMid, decimalPlus);
 
 		if (q <= 1) {
@@ -572,7 +574,7 @@ inline int ryu(const double d, char* buffer) {
 	uint64_t out;
 	computeShortest(decimalMinus, decimalMid, decimalPlus, decimalExponent, even,
 		decimalMinusIsTrailingZeros, decimalMidIsTrailingZeros, out, decimalExponent);
-	char integerBuff[17];
+	char integerBuff[20];
 	char* start = writeIntegerToBuff(out, integerBuff + sizeof(integerBuff));
 	int32_t length = sizeof(integerBuff) - (start - integerBuff);
 	return conformalizeNumberString2(buffer, start, length, decimalExponent);

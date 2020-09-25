@@ -20,6 +20,7 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 // IN THE SOFTWARE.
 
+#include <cinttypes>
 #include <iostream>
 #include <iomanip>
 #include <sstream>
@@ -50,7 +51,7 @@ int testDouble(double d, jaxup::JsonParser<std::istream>& parser, jaxup::JsonGen
 	generator.flush();
 	double r = std::strtod(ss.str().c_str(), nullptr);
 	if (doubleAsU64(d) != doubleAsU64(r)) {
-		std::cout << "Printed string does not recover to value.  Value: " << d << ", printed: " << ss.str() << ", recovered: " << r << std::endl;
+		std::cout << "Printed string does not recover to value.  Value: " << std::setprecision(17) << d << ", printed: " << ss.str() << ", recovered: " << r << std::endl;
 		std::cout << "  Expected:  " << std::bitset<64>(doubleAsU64(d)) << std::endl;
 		std::cout << "  Recovered: " << std::bitset<64>(doubleAsU64(r)) << std::endl;
 		error |= 2;
@@ -144,7 +145,7 @@ int main(int /*argc*/, char* /*argv*/[]) {
 	for (const auto& integer : intTestCases) {
 		char* start = jaxup::numeric::writeIntegerToBuff(integer, buffer + sizeof(buffer) - 1);
 		int64_t read;
-		if (std::sscanf(start, "%ld", &read) != 1 || read != integer) {
+		if (std::sscanf(start, "%" SCNd64, &read) != 1 || read != integer) {
 			std::cout << "Failed to write: " << integer << std::endl;
 			++numWriteErrors;
 			++numErrors;
