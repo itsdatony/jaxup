@@ -457,7 +457,7 @@ static inline void computeShortest(uint64_t minus, uint64_t mid, uint64_t plus, 
 	out = mid + (mid == minus || roundUp);
 }
 
-inline int conformalizeNumberString2(char* buffer, char* integer, int length, int powTen) {
+inline int conformalizeNumberString(char* buffer, char* integer, int length, int powTen) {
 	const int totalPowTen = length + powTen;
 	if (totalPowTen <= 19) {
 		if (powTen >= 0) {
@@ -505,13 +505,13 @@ inline int conformalizeNumberString2(char* buffer, char* integer, int length, in
 }
 
 inline int ryu(const double d, char* buffer) {
-	if (d == 0.0) {
-		buffer[0] = '0';
-		return 1;
-	}
 	if (std::signbit(d)) {
 		buffer[0] = '-';
 		return 1 + ryu(-d, buffer + 1);
+	}
+	if (d == 0.0) {
+		buffer[0] = '0';
+		return 1;
 	}
 	ExplodedFloatingPoint binary(d);
 	bool even = (binary.mantissa & 1) == 0;
@@ -577,7 +577,7 @@ inline int ryu(const double d, char* buffer) {
 	char integerBuff[20];
 	char* start = writeIntegerToBuff(out, integerBuff + sizeof(integerBuff));
 	int32_t length = sizeof(integerBuff) - (start - integerBuff);
-	return conformalizeNumberString2(buffer, start, length, decimalExponent);
+	return conformalizeNumberString(buffer, start, length, decimalExponent);
 }
 
 }
