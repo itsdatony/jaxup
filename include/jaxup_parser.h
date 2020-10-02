@@ -394,6 +394,7 @@ private:
 
 		bool rounded = false;
 		uint64_t significand = getIntFromChar(c);
+		uint32_t numDigits = 1;
 		int decimalExponent = 0;
 		while (peekNextCharacter(&c) && isDigit(c)) {
 			if (significand >= bigInt) {
@@ -408,6 +409,7 @@ private:
 			}
 			significand = significand * 10 + getIntFromChar(c);
 			++inputOffset;
+			++numDigits;
 		}
 		// Eat remaining digits
 		while (isDigit(c)) {
@@ -419,6 +421,7 @@ private:
 			if (!isDigit(c)) {
 				throw JsonException("Expected digit after decimal point");
 			}
+			int startDecimalExponent = decimalExponent;
 			if (!rounded) {
 				do {
 					if (significand >= bigInt) {
@@ -439,6 +442,7 @@ private:
 			while (isDigit(c)) {
 				advanceAndPeekNextCharacter(&c);
 			}
+			numDigits += startDecimalExponent - decimalExponent;
 		}
 
 		if (c == 'e' || c == 'E') {
@@ -488,7 +492,7 @@ private:
 			}
 			// Fall through to floating point handling
 		}
-		this->doubleValue = numeric::raiseToPowTen(significand, decimalExponent);
+		this->doubleValue = numeric::raiseToPowTen(significand, decimalExponent, numDigits);
 		if (std::isnan(this->doubleValue)) {
 			throw JsonException("Number does not fit in a double");
 		}
