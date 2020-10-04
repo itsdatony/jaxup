@@ -486,7 +486,7 @@ inline int ryu(const double d, char* buffer) {
 		decimalMinusIsTrailingZeros, decimalMidIsTrailingZeros, out, decimalExponent);
 	char integerBuff[20];
 	char* start = writeIntegerToBuff(out, integerBuff + sizeof(integerBuff));
-	int32_t length = sizeof(integerBuff) - (start - integerBuff);
+	int length = static_cast<int>(sizeof(integerBuff) - (start - integerBuff));
 	return conformalizeNumberString(buffer, start, length, decimalExponent);
 }
 
