@@ -23,12 +23,17 @@
 #ifndef JAXUP_POWER_TABLES_H
 #define JAXUP_POWER_TABLES_H
 
+#ifndef JAXUP_POWER_CACHE_STATIC
+#define JAXUP_POWER_CACHE_STATIC static
+#endif
+
 #include <array>
 
 namespace jaxup {
 namespace numeric {
 
-static const std::array<uint64_t, 2> positivePowerTable[] = {
+#ifndef JAXUP_USE_SHARED_POWER_CACHE
+JAXUP_POWER_CACHE_STATIC const std::array<uint64_t, 2> positivePowerTable[326] = {
 	{1152921504606846976ULL, 0ULL},
 	{1441151880758558720ULL, 0ULL},
 	{1801439850948198400ULL, 0ULL},
@@ -357,7 +362,7 @@ static const std::array<uint64_t, 2> positivePowerTable[] = {
 	{1780059086805761106ULL, 8710297504448807696ULL},
 };
 
-static const std::array<uint64_t, 2> negativePowerTable[] = {
+JAXUP_POWER_CACHE_STATIC const std::array<uint64_t, 2> negativePowerTable[342] = {
 	{2305843009213693952ULL, 1ULL},
 	{1844674407370955161ULL, 11068046444225730970ULL},
 	{1475739525896764129ULL, 5165088340638674453ULL},
@@ -701,6 +706,10 @@ static const std::array<uint64_t, 2> negativePowerTable[] = {
 	{1681492134412670958ULL, 14677010862395735754ULL},
 	{1345193707530136767ULL, 673562245690857633ULL},
 };
+#else
+extern const std::array<uint64_t, 2> positivePowerTable[326];
+extern const std::array<uint64_t, 2> negativePowerTable[342];
+#endif
 
 }
 }

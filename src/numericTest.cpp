@@ -27,6 +27,7 @@
 #include <random>
 #include <bitset>
 
+#define JAXUP_USE_SHARED_POWER_CACHE
 #include <jaxup.h>
 
 using namespace jaxup;
