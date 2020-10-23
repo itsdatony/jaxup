@@ -21,6 +21,12 @@ Alternatively, you can build the project and install it with CMake.
     cmake --build .
     cmake --build . --target install
 
+## Shared power cache
+
+Due to the header only setup, each translation unit that uses jaxup may end up with a separate copy of a sizeable power cache (used for quickly
+converting doubles).  To avoid this, define `JAXUP_USE_SHARED_POWER_CACHE` before including the jaxup headers and link the generated static library,
+`libjaxupPowerCache`.  This is purely optional, but it will result in smaller binaries.
+
 ## Unicode support
 
 Currently, Jaxup only handles parsing and generation of UTF-8 documents.  This may be extended in the future, but this covers 99.9% of existing JSON usage.
