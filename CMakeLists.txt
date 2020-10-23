@@ -18,6 +18,8 @@ endif()
 
 include_directories(include/)
 
+add_library(jaxupPowerCache STATIC src/sharedPowerCache.cpp)
+
 add_executable(fastParse src/main.cpp)
 
 add_executable(uglify src/uglify.cpp)
@@ -26,4 +28,8 @@ add_executable(doubleWriter src/doubleWriter.cpp)
 
 add_executable(nodeCopy src/nodeCopy.cpp)
 
+add_executable(numericTest src/numericTest.cpp)
+target_link_libraries(numericTest jaxupPowerCache)
+
 install(DIRECTORY include/ DESTINATION include/jaxup FILES_MATCHING PATTERN "*.h")
+install(TARGETS jaxupPowerCache DESTINATION lib)
