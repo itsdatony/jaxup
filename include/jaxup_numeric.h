@@ -427,7 +427,7 @@ inline int ryu(const double d, char* buffer) {
 	bool even = (binary.mantissa & 1) == 0;
 
 	// Shift left so that next highest/lowest floats can be expressed in the same exponent
-	uint32_t minusShift = (binary.mantissa != (1ULL << 52)) || (binary.exponent <= 1);
+	bool minusShift = (binary.mantissa != (1ULL << 52)) || (binary.exponent <= 1);
 	uint64_t binaryMid = binary.mantissa << 2;
 	uint64_t binaryPlus = binaryMid + 2;
 	uint64_t binaryMinus = binaryMid - 1 - minusShift;
