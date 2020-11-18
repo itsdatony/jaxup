@@ -57,13 +57,35 @@ int testDouble(double d, jaxup::JsonParser<std::istream>& parser, jaxup::JsonGen
 		std::cout << "  Recovered: " << std::bitset<64>(doubleAsU64(r)) << std::endl;
 		error |= 2;
 	}
+	ss.clear();
+	try {
+		parser.nextToken();
+	} catch (std::exception& e) {
+		std::cout << "Parser raised exception: " << e.what() << std::endl;
+		error |= 1;
+		return error;
+	}
+	double p = parser.getDoubleValue();
+	if (doubleAsU64(d) != doubleAsU64(p)) {
+		std::cout << "Roundtrip values do not match.  Expected: " << d << ", got: " << p << std::endl;
+		std::cout << "  Expected:  " << std::bitset<64>(doubleAsU64(d)) << std::endl;
+		std::cout << "  Evaluated: " << std::bitset<64>(doubleAsU64(p)) << std::endl;
+		std::cout << "  Written: " << ss.str() << std::endl;
+		error |= 1;
+	}
 
 	char buff[200];
 	std::snprintf(buff, 200, "%1.16le", d);
 	ss.str(buff);
 	ss.clear();
-	parser.nextToken();
-	double p = parser.getDoubleValue();
+	try {
+		parser.nextToken();
+	} catch (std::exception& e) {
+		std::cout << "Parser raised exception: " << e.what() << std::endl;
+		error |= 1;
+		return error;
+	}
+	p = parser.getDoubleValue();
 	if (doubleAsU64(d) != doubleAsU64(p)) {
 		std::cout << "Values do not match.  Expected: " << d << ", got: " << p << std::endl;
 		std::cout << "  Expected:  " << std::bitset<64>(doubleAsU64(d)) << std::endl;
@@ -73,7 +95,24 @@ int testDouble(double d, jaxup::JsonParser<std::istream>& parser, jaxup::JsonGen
 	return error;
 }
 
+int testNonStandardFormat(const char* input, double /*expected*/, jaxup::JsonParser<std::istream>& parser, std::stringstream& ss) {
+	int error = 0;
+	ss.str(input);
+	ss.clear();
+	parser.nextToken();
+	double p = parser.getDoubleValue();
+	double expected = std::strtod(input, nullptr);
+	if (doubleAsU64(expected) != doubleAsU64(p)) {
+		std::cout << "Values do not match.  Expected " << expected << " from input \"" << input << "\", got: " << p << std::endl;
+		std::cout << "  Expected:  " << std::bitset<64>(doubleAsU64(expected)) << std::endl;
+		std::cout << "  Evaluated: " << std::bitset<64>(doubleAsU64(p)) << std::endl;
+		error = 1;
+	}
+	return error;
+}
+
 int main(int /*argc*/, char* /*argv*/[]) {
+	std::cout << std::setprecision(17) << std::scientific;
 	JsonFactory factory;
 	std::stringstream ss;
 	auto parser = factory.createJsonParser(ss);
@@ -102,7 +141,12 @@ int main(int /*argc*/, char* /*argv*/[]) {
 		9934509011495037000.0,
 		29018956725463772,
 		6.0807728793355840e+15,
-		1.4752497761390908e+16
+		1.4752497761390908e+16,
+		9.76598962682097729e-162,
+		1.72622498213725813e-13,
+		5.855406067890361e20,
+		1.99442770359396e-309,
+		9.905549738666e-282
 	};
 	int numErrors = 0;
 	int numWriteErrors = 0;
@@ -131,6 +175,33 @@ int main(int /*argc*/, char* /*argv*/[]) {
 			numBothErrors += error == 3;
 			std::cout << "str: " << ss.str() << std::endl;
 		};
+	}
+
+	std::pair<const char*, double> nonStandardFormatCases[] = {
+		{"1234567890123456780", 1234567890123456768.0},
+		{"12.34567890123456780", 12.345678901234567348410564591176807880401611328125},
+		{"1.234567890123456780", 1.2345678901234566904321354741114191710948944091796875},
+		{"0.0001234567890123456780", 0.000123456789012345671298354066180991139844991266727447509765625},
+		{"0.00012345678901234567", 0.000123456789012345671298354066180991139844991266727447509765625},
+		{"0.0001234567890123456", 0.00012345678901234558998319112976815858928603120148181915283203125},
+		{"0.0001234567890123456E-10", 0.00012345678901234558998319112976815858928603120148181915283203125e-10},
+		{"999999999999999999999.99999999", 1e21},
+		{"9223372036854775807", 9223372036854775807.0},
+		{"9999999999999999999", 1e19},
+		{"9999999999999999998", 1e19},
+		{"9999999999999999997", 1e19},
+		{"9999999999999999996", 1e19},
+		{"9999999999999999995", 1e19},
+		{"9999999999999999994", 1e19},
+		{"999999999999999.9994", 1e15},
+		{"0.9999999999999999994", 1.0},
+		{"0.009999999999999999994", 1.0e-2},
+		{"0.00999999999999999999", 1.0e-2},
+		{"9999999999999999994.0000000000", 1e19},
+		{"1111111111111111111", 1.1111111111111111e18}
+	};
+	for (const auto& pair : nonStandardFormatCases) {
+		numReadErrors += testNonStandardFormat(pair.first, pair.second, *parser, ss);
 	}
 
 	std::cout << "Num double write errors: " << numWriteErrors << std::endl;

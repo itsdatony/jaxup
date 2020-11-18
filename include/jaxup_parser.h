@@ -380,6 +380,10 @@ private:
 		JsonToken output = parsePositiveNumber(c);
 		this->doubleValue *= -1.0;
 		this->int64Value *= -1;
+		if (output == JsonToken::VALUE_NUMBER_INT && this->int64Value == 0) {
+			output = this->token = JsonToken::VALUE_NUMBER_FLOAT;
+			this->doubleValue = -0.0;
+		}
 		return output;
 	}
 
@@ -400,9 +404,9 @@ private:
 			if (significand >= bigInt) {
 				if (significand != bigInt || c > '7') {
 					rounded = true;
-					++decimalExponent;
 					if (c > '5' || (c == '5' && (significand & 1))) {
 						++significand;
+						numDigits += significand == 1000000000000000000ULL;
 					}
 					break;
 				}
@@ -414,6 +418,7 @@ private:
 		// Eat remaining digits
 		while (isDigit(c)) {
 			advanceAndPeekNextCharacter(&c);
+			++decimalExponent;
 		}
 
 		if (c == '.') {
@@ -421,9 +426,16 @@ private:
 			if (!isDigit(c)) {
 				throw JsonException("Expected digit after decimal point");
 			}
-			int startDecimalExponent = decimalExponent;
 			if (!rounded) {
-				do {
+				if (significand == 0) {
+					numDigits = 0;
+					while (c == '0') {
+						advanceAndPeekNextCharacter(&c);
+						--decimalExponent;
+					}
+				}
+				int startDecimalExponent = decimalExponent;
+				while (isDigit(c)) {
 					if (significand >= bigInt) {
 						if (significand != bigInt || c > '7') {
 							rounded = true;
@@ -436,13 +448,13 @@ private:
 					significand = significand * 10 + getIntFromChar(c);
 					--decimalExponent;
 					advanceAndPeekNextCharacter(&c);
-				} while (isDigit(c));
+				}
+				numDigits += startDecimalExponent - decimalExponent;
 			}
 			// Eat remaining digits
 			while (isDigit(c)) {
 				advanceAndPeekNextCharacter(&c);
 			}
-			numDigits += startDecimalExponent - decimalExponent;
 		}
 
 		if (c == 'e' || c == 'E') {
@@ -493,7 +505,7 @@ private:
 			// Fall through to floating point handling
 		}
 		this->doubleValue = numeric::raiseToPowTen(significand, decimalExponent, numDigits);
-		if (std::isnan(this->doubleValue)) {
+		if (!std::isfinite(this->doubleValue)) {
 			throw JsonException("Number does not fit in a double");
 		}
 

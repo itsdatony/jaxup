@@ -90,7 +90,7 @@ public:
 	}
 	ExplodedFloatingPoint(const uint64_t mantissa, const int exponent) : mantissa{mantissa}, exponent{exponent} {}
 
-	double asDouble() const {
+	double asDouble(bool exact) const {
 		auto temp = ExplodedFloatingPoint(mantissa, exponent);
 		if (temp.mantissa == 0) {
 			return 0.0;
@@ -103,7 +103,8 @@ public:
 		if (biasedExponent > 0) {
 			out = temp.mantissa >> 10;
 			// round to even
-			out += (out & 1) && ((out & 2) || (temp.mantissa & 0x3FF));
+			exact = exact & ((temp.mantissa & 0x3FF) == 0);
+			out += (out & 1) && ((out & 2) || !exact);
 			if (out & (impliedBitOffset << 2)) {
 				out = out >> 1;
 				++biasedExponent;
@@ -119,7 +120,8 @@ public:
 			}
 			out = temp.mantissa >> (11 - biasedExponent);
 			// round to even
-			out += (out & 1) && ((out & 2) || (temp.mantissa & (0xFFFFFFFFFFFFFFFFULL >> (53 + biasedExponent))));
+			exact = exact & ((temp.mantissa & (0xFFFFFFFFFFFFFFFFULL >> (53 + biasedExponent))) == 0);
+			out += (out & 1) && ((out & 2) || !exact);
 			// overflow happily rolls into a normalized number, so no need to check
 			out = out >> 1;
 		}
@@ -182,7 +184,7 @@ inline uint32_t ilog2(uint64_t value, uint32_t numDigits) {
 	const uint32_t log2 = ((numDigits - 1) << 20) / 315653;
 	// 2: Divide value by 2^guess and use a lookup table for whatever's left
 	// Quotient really shouldn't go past 11, but add a few more just in case
-	static const uint32_t map[] = {0, 0, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3};
+	static const uint32_t map[] = {0, 0, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4};
 	return log2 + map[value >> log2];
 }
 
@@ -243,6 +245,20 @@ static inline void multiplyAll(const uint64_t& minus, const uint64_t& mid, const
 	plusOut = full64x128MultiplyAndShift(plus, multiplier, shift);
 }
 
+static bool isDivisibleByPowerOf5(uint64_t value, uint32_t power) {
+	while (power-- > 0) {
+		if ((value % 5) != 0) {
+			return false;
+		}
+		value /= 5;
+	}
+	return true;
+}
+
+static inline bool isDivisibleByPowerOf2(const uint64_t value, const uint32_t power) {
+	return (value & ((1ULL << power) - 1)) == 0;
+}
+
 inline double raiseToPowTen(uint64_t base, int powTen, int numDigits) {
 	static constexpr double powers[] = {1e0, 1e1, 1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9, 1e10, 1e11, 1e12, 1e13, 1e14, 1e15, 1e16, 1e17, 1e18, 1e19, 1e20, 1e21, 1e22};
 	if (std::abs(powTen) <= 22 && ((base <= (1ULL<<53)) || ((base & 0xFFF) == 0))) {
@@ -263,11 +279,13 @@ inline double raiseToPowTen(uint64_t base, int powTen, int numDigits) {
 		return std::numeric_limits<double>::infinity();
 	}
 	if (numDigits > 17) {
-		uint32_t divisor = static_cast<uint32_t>(getIntegerPowTen(numDigits - 17));
+		const uint32_t surplus = numDigits - 17;
+		uint32_t divisor = static_cast<uint32_t>(getIntegerPowTen(surplus));
 		uint32_t remainder = base % divisor;
 		base /= divisor;
 		uint32_t half = divisor >> 1;
 		base += (remainder > half) || (remainder == half && (base & 1) == 1);
+		powTen += surplus;
 		numDigits = 17 + (base == 100000000000000000ULL);
 	}
 	const uint32_t log2 = ilog2(base, numDigits);
@@ -278,9 +296,12 @@ inline double raiseToPowTen(uint64_t base, int powTen, int numDigits) {
 	const auto& factor = tables[powTen > 0][absPowTen];
 
 	ExplodedFloatingPoint p;
-	p.exponent = shift + powTen + sgn(powTen) * bitCountOf5ToThe(absPowTen) + (powTen < 0) - 61 - 7;
-	p.mantissa = full64x128MultiplyAndShift(base << 7, factor, shift);
-	return p.asDouble();
+	p.exponent = shift + powTen + sgn(powTen) * bitCountOf5ToThe(absPowTen) + (powTen < 0) - 61;
+	p.mantissa = full64x128MultiplyAndShift(base, factor, shift);
+	int powDiff = p.exponent - powTen;
+	bool exact = (powTen < 0 && isDivisibleByPowerOf5(base, -powTen)) ||
+		(powTen >= 0 && (powDiff < 0 || (powDiff < 64 && isDivisibleByPowerOf2(base, powDiff))));
+	return p.asDouble(exact);
 }
 
 inline constexpr char digitToAscii(unsigned int d) {
@@ -306,16 +327,6 @@ inline int writeSmallInteger(char* buffer, int integer) {
 		buffer[0] = digitToAscii(integer);
 		return 1;
 	}
-}
-
-static bool isDivisibleByPowerOf5(uint64_t value, uint32_t power) {
-	while (power-- > 0) {
-		if ((value % 5) != 0) {
-			return false;
-		}
-		value /= 5;
-	}
-	return true;
 }
 
 static inline void computeShortest(uint64_t minus, uint64_t mid, uint64_t plus, uint32_t exponent, bool even,
