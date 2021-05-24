@@ -483,7 +483,7 @@ public:
 		case JsonNodeType::VALUE_OBJECT:
 			return this->value.object->size();
 		default:
-			return 1;
+			return 0;
 		}
 	}
 
