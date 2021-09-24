@@ -99,7 +99,7 @@ public:
 
 		int64_t biasedExponent = temp.exponent + exponentBias + 11;
 		uint64_t out;
-		assert(biasedExponent < 1024 && biasedExponent > -52);
+		assert(biasedExponent < 2048 && biasedExponent >= -53);
 		if (biasedExponent > 0) {
 			out = temp.mantissa >> 10;
 			// round to even
