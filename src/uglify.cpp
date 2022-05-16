@@ -1,6 +1,6 @@
 // The MIT License (MIT)
 //
-// Copyright (c) 2017-2021 Kyle Hawk
+// Copyright (c) 2017-2022 Kyle Hawk
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -78,6 +78,10 @@ int streamingCopy(FILE* inputFile, FILE* outputFile, bool prettify) {
 }
 
 int main(int argc, char* argv[]) {
+	if (argc < 3) {
+		std::cerr << "Expected format: " << argv[0] << " inputFile outputFile" << std::endl;
+		return 1;
+	}
 	auto start = std::chrono::high_resolution_clock::now();
 	//std::ifstream inputFile(argv[1]);
 	//std::ofstream outputFile(argv[2]);
@@ -93,6 +97,7 @@ int main(int argc, char* argv[]) {
 		numTokens = streamingCopy(inputFile, outputFile, prettify);
 	} catch (const JsonException& e) {
 		std::cerr << "Failed to uglify file: " << e.what() << std::endl;
+		return 1;
 	}
 
 	auto end = std::chrono::high_resolution_clock::now();

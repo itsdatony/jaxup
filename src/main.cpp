@@ -1,6 +1,6 @@
 // The MIT License (MIT)
 //
-// Copyright (c) 2017-2021 Kyle Hawk
+// Copyright (c) 2017-2022 Kyle Hawk
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -27,7 +27,11 @@
 
 using namespace jaxup;
 
-int main(int /*argc*/, char* argv[]) {
+int main(int argc, char* argv[]) {
+	if (argc < 2) {
+		std::cerr << "Expected format: " << argv[0] << " inputFile" << std::endl;
+		return 1;
+	}
 	int error = 0;
 	auto start = std::chrono::high_resolution_clock::now();
 	//std::ifstream inputFile(argv[1]);
@@ -45,7 +49,7 @@ int main(int /*argc*/, char* argv[]) {
 		}
 	} catch (const JsonException& e) {
 		std::cerr << "Failed to parse file: " << e.what() << std::endl;
-		error = -1;
+		error = 1;
 	}
 
 	auto end = std::chrono::high_resolution_clock::now();
