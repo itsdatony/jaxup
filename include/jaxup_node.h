@@ -144,8 +144,8 @@ public:
 		}
 	}
 
-	inline void copyTo(const JsonNode& rhs, size_t maxDepth = 50) const {
-		rhs.copyTo(*this, maxDepth);
+	inline void copyTo(JsonNode& rhs, size_t maxDepth = 50) const {
+		rhs.copyFrom(*this, maxDepth);
 	}
 
 	JsonNodeType getType() const {
