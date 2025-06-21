@@ -28,6 +28,7 @@
 #endif
 
 #include <array>
+#include <cstdint>
 
 namespace jaxup {
 namespace numeric {
