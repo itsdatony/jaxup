@@ -394,11 +394,11 @@ public:
 		if (this->type != JsonNodeType::VALUE_ARRAY) {
 			makeArray();
 		}
-		if (n > this->value.array->size()) {
-			if (n > this->value.array->size() + 1) {
-				this->value.array->resize(n + 1);
-			} else {
+		if (n >= this->value.array->size()) {
+			if (n == this->value.array->size()) {
 				this->value.array->emplace_back(std::move(JsonNode()));
+			} else {
+				this->value.array->resize(n + 1);
 			}
 		}
 		return this->value.array->at(n);
