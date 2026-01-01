@@ -396,7 +396,7 @@ public:
 		}
 		if (n >= this->value.array->size()) {
 			if (n == this->value.array->size()) {
-				this->value.array->emplace_back(std::move(JsonNode()));
+				this->value.array->emplace_back(JsonNode());
 			} else {
 				this->value.array->resize(n + 1);
 			}
@@ -408,7 +408,7 @@ public:
 		if (this->type != JsonNodeType::VALUE_ARRAY) {
 			makeArray();
 		}
-		this->value.array->emplace_back(std::move(JsonNode()));
+		this->value.array->emplace_back(JsonNode());
 		return this->value.array->back();
 	}
 
@@ -442,7 +442,7 @@ public:
 				return pair.second;
 			}
 		}
-		this->value.object->emplace_back(key, std::move(JsonNode()));
+		this->value.object->emplace_back(key, JsonNode());
 		return this->value.object->back().second;
 	}
 
@@ -450,7 +450,7 @@ public:
 		if (this->type != JsonNodeType::VALUE_OBJECT) {
 			makeObject();
 		}
-		this->value.object->emplace_back(key, std::move(JsonNode()));
+		this->value.object->emplace_back(key, JsonNode());
 		return this->value.object->back().second;
 	}
 
