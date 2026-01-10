@@ -44,3 +44,6 @@ target_link_libraries(numericTest jaxupPowerCache)
 
 install(DIRECTORY include/ DESTINATION include/jaxup FILES_MATCHING PATTERN "*.h")
 install(TARGETS jaxupPowerCache DESTINATION lib)
+
+include(CTest)
+add_test(numericTest numericTest)
