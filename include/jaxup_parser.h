@@ -108,7 +108,7 @@ public:
 		} else if (this->token == JsonToken::VALUE_NUMBER_FLOAT) {
 			return static_cast<int64_t>(this->doubleValue);
 		}
-		throw JsonException("Attempted to parse a ", getTokenAsString(this->token), " token as an Integer");
+		JAXUP_THROW("Attempted to parse a ", getTokenAsString(this->token), " token as an Integer");
 	}
 
 	double getDoubleValue() const {
@@ -117,7 +117,7 @@ public:
 		} else if (this->token == JsonToken::VALUE_NUMBER_INT) {
 			return static_cast<double>(this->int64Value);
 		}
-		throw JsonException("Attempted to parse a ", getTokenAsString(this->token), " token as a Double");
+		JAXUP_THROW("Attempted to parse a ", getTokenAsString(this->token), " token as a Double");
 	}
 
 	bool getBooleanValue() const {
@@ -126,7 +126,7 @@ public:
 		} else if (this->token == JsonToken::VALUE_FALSE) {
 			return false;
 		}
-		throw JsonException("Attempted to parse a ", getTokenAsString(this->token), " token as a Boolean");
+		JAXUP_THROW("Attempted to parse a ", getTokenAsString(this->token), " token as a Boolean");
 	}
 
 	const std::string& getText() const {
@@ -154,7 +154,7 @@ public:
 		if (this->token == JsonToken::FIELD_NAME) {
 			getNextSignificantCharacter(&c);
 			if (c != ':') {
-				throw JsonException("Expected a colon, but none was found");
+				JAXUP_THROW("Expected a colon, but none was found");
 			}
 		} else if (!this->tagStack.empty() && this->token != JsonToken::START_ARRAY && this->token != JsonToken::START_OBJECT) {
 			// Expect a comma or a close array/object
@@ -168,8 +168,7 @@ public:
 				comma = true;
 				break;
 			default:
-				throw JsonException(
-					"Expected a comma before the next value, but none was found");
+				JAXUP_THROW("Expected a comma before the next value, but none was found");
 			}
 		}
 
@@ -180,7 +179,7 @@ public:
 			}
 			// Expect a field name next
 			if (c != '"') {
-				throw JsonException("Expected a quoted string value");
+				JAXUP_THROW("Expected a quoted string value");
 			}
 			parseString(currentName);
 			return foundToken(JsonToken::FIELD_NAME);
@@ -208,17 +207,17 @@ public:
 				return foundToken(JsonToken::VALUE_STRING);
 			case 't':
 				if (!nextEquals("rue", 3)) {
-					throw JsonException("Invalid token beginning with t");
+					JAXUP_THROW("Invalid token beginning with t");
 				}
 				return foundToken(JsonToken::VALUE_TRUE);
 			case 'f':
 				if (!nextEquals("alse", 4)) {
-					throw JsonException("Invalid token beginning with f");
+					JAXUP_THROW("Invalid token beginning with f");
 				}
 				return foundToken(JsonToken::VALUE_FALSE);
 			case 'n':
 				if (!nextEquals("ull", 3)) {
-					throw JsonException("Invalid token beginning with n");
+					JAXUP_THROW("Invalid token beginning with n");
 				}
 				return foundToken(JsonToken::VALUE_NULL);
 			case '{':
@@ -232,14 +231,14 @@ public:
 			case ']':
 				return parseCloseArray(comma);
 			default:
-				throw JsonException("Invalid token beginning with character: ", std::string(&c, 1));
+				JAXUP_THROW("Invalid token beginning with character: ", std::string(&c, 1));
 			}
 		}
 		if (!this->tagStack.empty()) {
 			if (tagStack.back() == JsonToken::START_OBJECT) {
-				throw JsonException("Failed to close object at end of stream");
+				JAXUP_THROW("Failed to close object at end of stream");
 			} else {
-				throw JsonException("Failed to close array at end of stream");
+				JAXUP_THROW("Failed to close array at end of stream");
 			}
 		}
 		return foundToken(JsonToken::NOT_AVAILABLE);
@@ -267,7 +266,7 @@ private:
 
 			if (inputOffset > inputSize - 1) {
 				if (!loadMore()) {
-					throw JsonException("String was not terminated");
+					JAXUP_THROW("String was not terminated");
 				}
 				continue;
 			}
@@ -275,7 +274,7 @@ private:
 			++inputOffset;
 			if (c == '"') {
 				if (!nextIsDelimiter()) {
-					throw JsonException("Invalid string");
+					JAXUP_THROW("Invalid string");
 				}
 				return;
 			} else if (c == '\\') {
@@ -315,12 +314,12 @@ private:
 					}
 					break;
 				default:
-					throw JsonException("Invalid escape code: \\", std::string(&c, 1));
+					JAXUP_THROW("Invalid escape code: \\", std::string(&c, 1));
 				}
 			} else {
 				char intRep[5] = { 0, 0, 0, 0, 0 };
 				numeric::writeSmallInteger(intRep, (int) c);
-				throw JsonException("Unescaped control character with value: ", intRep);
+				JAXUP_THROW("Unescaped control character with value: ", intRep);
 			}
 		}
 	}
@@ -335,7 +334,7 @@ private:
 			} else {
 				c = c & ~' '; // To uppercase
 				if (c < 'A' || c > 'F') {
-					throw JsonException("Invalid hex digit");
+					JAXUP_THROW("Invalid hex digit");
 				}
 				code = code * 16 + c - 'A' + 10;
 			}
@@ -345,13 +344,13 @@ private:
 
 	inline JsonToken parseCloseArray(bool comma = false) {
 		if (comma) {
-			throw JsonException("Invalid trailing comma in array");
+			JAXUP_THROW("Invalid trailing comma in array");
 		}
 		if (tagStack.empty()) {
-			throw JsonException("Tag underflow");
+			JAXUP_THROW("Tag underflow");
 		}
 		if (tagStack.back() != JsonToken::START_ARRAY) {
-			throw JsonException("Unexpected end array");
+			JAXUP_THROW("Unexpected end array");
 		}
 		tagStack.pop_back();
 		return foundToken(JsonToken::END_ARRAY);
@@ -359,13 +358,13 @@ private:
 
 	inline JsonToken parseCloseObject(bool comma = false) {
 		if (comma) {
-			throw JsonException("Invalid trailing comma in object");
+			JAXUP_THROW("Invalid trailing comma in object");
 		}
 		if (tagStack.empty()) {
-			throw JsonException("Tag underflow");
+			JAXUP_THROW("Tag underflow");
 		}
 		if (tagStack.back() != JsonToken::START_OBJECT) {
-			throw JsonException("Unexpected end object");
+			JAXUP_THROW("Unexpected end object");
 		}
 		tagStack.pop_back();
 		return foundToken(JsonToken::END_OBJECT);
@@ -374,7 +373,7 @@ private:
 	JsonToken parseNegativeNumber() {
 		char c;
 		if (!readNextCharacter(&c) || !isDigit(c)) {
-			throw JsonException("Invalid number");
+			JAXUP_THROW("Invalid number");
 		}
 
 		JsonToken output = parsePositiveNumber(c);
@@ -391,7 +390,7 @@ private:
 		static const uint64_t bigInt = (uint64_t)(INT64_MAX) / 10;
 		if (c == '0') {
 			if (peekNextCharacter(&c) && isDigit(c)) {
-				throw JsonException("Leading zeroes are not allowed");
+				JAXUP_THROW("Leading zeroes are not allowed");
 			}
 			c = '0'; // Undo peek
 		}
@@ -424,7 +423,7 @@ private:
 		if (c == '.') {
 			advanceAndPeekNextCharacter(&c);
 			if (!isDigit(c)) {
-				throw JsonException("Expected digit after decimal point");
+				JAXUP_THROW("Expected digit after decimal point");
 			}
 			if (!rounded) {
 				if (significand == 0) {
@@ -469,7 +468,7 @@ private:
 			}
 
 			if (!isDigit(c)) {
-				throw JsonException("Invalid exponent");
+				JAXUP_THROW("Invalid exponent");
 			}
 
 			int tempExponent = 0;
@@ -485,7 +484,7 @@ private:
 		}
 
 		if (c != 0 && !isDelimiter(c)) {
-			throw JsonException("Invalid JSON number");
+			JAXUP_THROW("Invalid JSON number");
 		}
 
 		if (!rounded) {
@@ -506,7 +505,7 @@ private:
 		}
 		this->doubleValue = numeric::raiseToPowTen(significand, decimalExponent, numDigits);
 		if (!std::isfinite(this->doubleValue)) {
-			throw JsonException("Number does not fit in a double");
+			JAXUP_THROW("Number does not fit in a double");
 		}
 
 		return foundToken(JsonToken::VALUE_NUMBER_FLOAT);

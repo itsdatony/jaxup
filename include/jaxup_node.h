@@ -103,7 +103,7 @@ public:
 		switch (rhs.type) {
 		case JsonNodeType::VALUE_OBJECT:
 			if (maxDepth == 0) {
-				throw JsonException("Max depth exceeded while copying Object node");
+				JAXUP_THROW("Max depth exceeded while copying Object node");
 			}
 			makeObject();
 			value.object->clear();
@@ -116,7 +116,7 @@ public:
 			break;
 		case JsonNodeType::VALUE_ARRAY:
 			if (maxDepth == 0) {
-				throw JsonException("Max depth exceeded while copying Array node");
+				JAXUP_THROW("Max depth exceeded while copying Array node");
 			}
 			makeArray();
 			value.array->clear();
@@ -162,7 +162,7 @@ public:
 		} else if (this->type == JsonNodeType::VALUE_NUMBER_FLOAT) {
 			return static_cast<int64_t>(this->value.d);
 		}
-		throw JsonException("Attempted to read JSON ", getNodeTypeAsString(this->type), " node as an Integer");
+		JAXUP_THROW("Attempted to read JSON ", getNodeTypeAsString(this->type), " node as an Integer");
 	}
 
 	inline int64_t asInteger(int64_t defaultValue) const {
@@ -175,7 +175,7 @@ public:
 	inline int64_t getInteger(const std::string& key) const {
 		const auto& node = (*this)[key];
 		if (!node.isNumeric()) {
-			throw JsonException("Attempted to read field \"", key, "\" as an Integer, but it is of type ", getNodeTypeAsString(node.type));
+			JAXUP_THROW("Attempted to read field \"", key, "\" as an Integer, but it is of type ", getNodeTypeAsString(node.type));
 		}
 		return node.asInteger();
 	}
@@ -185,7 +185,7 @@ public:
 		if (node.isNull()) {
 			return defaultValue;
 		} else if (!node.isNumeric()) {
-			throw JsonException("Attempted to read field \"", key, "\" as an Integer, but it is of type ", getNodeTypeAsString(node.type));
+			JAXUP_THROW("Attempted to read field \"", key, "\" as an Integer, but it is of type ", getNodeTypeAsString(node.type));
 		}
 		return node.asInteger();
 	}
@@ -217,7 +217,7 @@ public:
 		} else if (this->type == JsonNodeType::VALUE_NUMBER_INT) {
 			return static_cast<double>(this->value.i);
 		}
-		throw JsonException("Attempted to read JSON ", getNodeTypeAsString(this->type), " node as a Double");
+		JAXUP_THROW("Attempted to read JSON ", getNodeTypeAsString(this->type), " node as a Double");
 	}
 
 	inline double asDouble(double defaultValue) const {
@@ -230,7 +230,7 @@ public:
 	inline double getDouble(const std::string& key) const {
 		const auto& node = (*this)[key];
 		if (!node.isNumeric()) {
-			throw JsonException("Attempted to read field \"", key, "\" as a Double, but it is of type ", getNodeTypeAsString(node.type));
+			JAXUP_THROW("Attempted to read field \"", key, "\" as a Double, but it is of type ", getNodeTypeAsString(node.type));
 		}
 		return node.asDouble();
 	}
@@ -240,7 +240,7 @@ public:
 		if (node.isNull()) {
 			return defaultValue;
 		} else if (!node.isNumeric()) {
-			throw JsonException("Attempted to read field \"", key, "\" as a Double, but it is of type ", getNodeTypeAsString(node.type));
+			JAXUP_THROW("Attempted to read field \"", key, "\" as a Double, but it is of type ", getNodeTypeAsString(node.type));
 		}
 		return node.asDouble();
 	}
@@ -262,7 +262,7 @@ public:
 		if (this->type == JsonNodeType::VALUE_BOOLEAN) {
 			return this->value.b;
 		}
-		throw JsonException("Attempted to read JSON ", getNodeTypeAsString(this->type), " node as a Boolean");
+		JAXUP_THROW("Attempted to read JSON ", getNodeTypeAsString(this->type), " node as a Boolean");
 	}
 
 	inline bool asBoolean(bool defaultValue) const {
@@ -275,7 +275,7 @@ public:
 	inline bool getBoolean(const std::string& key) const {
 		const auto& node = (*this)[key];
 		if (node.type != JsonNodeType::VALUE_BOOLEAN) {
-			throw JsonException("Attempted to read field \"", key, "\" as a Boolean, but it is of type ", getNodeTypeAsString(node.type));
+			JAXUP_THROW("Attempted to read field \"", key, "\" as a Boolean, but it is of type ", getNodeTypeAsString(node.type));
 		}
 		return node.asBoolean();
 	}
@@ -285,7 +285,7 @@ public:
 		if (node.type == JsonNodeType::VALUE_NULL) {
 			return defaultValue;
 		} else if (node.type != JsonNodeType::VALUE_BOOLEAN) {
-			throw JsonException("Attempted to read field \"", key, "\" as a Boolean, but it is of type ", getNodeTypeAsString(node.type));
+			JAXUP_THROW("Attempted to read field \"", key, "\" as a Boolean, but it is of type ", getNodeTypeAsString(node.type));
 		}
 		return node.asBoolean();
 	}
@@ -307,7 +307,7 @@ public:
 		if (this->type == JsonNodeType::VALUE_STRING) {
 			return *this->value.str;
 		}
-		throw JsonException("Attempted to read JSON ", getNodeTypeAsString(this->type), " node as a String");
+		JAXUP_THROW("Attempted to read JSON ", getNodeTypeAsString(this->type), " node as a String");
 	}
 
 	inline const std::string& asString(const std::string& defaultValue) const {
@@ -320,7 +320,7 @@ public:
 	inline const std::string& getString(const std::string& key) const {
 		const auto& node = (*this)[key];
 		if (node.type != JsonNodeType::VALUE_STRING) {
-			throw JsonException("Attempted to read field \"", key, "\" as a String, but it is of type ", getNodeTypeAsString(node.type));
+			JAXUP_THROW("Attempted to read field \"", key, "\" as a String, but it is of type ", getNodeTypeAsString(node.type));
 		}
 		return node.asString();
 	}
@@ -330,7 +330,7 @@ public:
 		if (node.type == JsonNodeType::VALUE_NULL) {
 			return defaultValue;
 		} else if (node.type != JsonNodeType::VALUE_STRING) {
-			throw JsonException("Attempted to read field \"", key, "\" as a String, but it is of type ", getNodeTypeAsString(node.type));
+			JAXUP_THROW("Attempted to read field \"", key, "\" as a String, but it is of type ", getNodeTypeAsString(node.type));
 		}
 		return node.asString();
 	}
@@ -456,10 +456,10 @@ public:
 
 	const std::pair<const std::string&, const JsonNode&> getField(size_t n) const {
 		if (this->type != JsonNodeType::VALUE_OBJECT) {
-			throw JsonException("Attempted to get a field out of a JSON ", getNodeTypeAsString(this->type), " node");
+			JAXUP_THROW("Attempted to get a field out of a JSON ", getNodeTypeAsString(this->type), " node");
 		}
 		if (n > this->value.object->size()) {
-			throw JsonException("Attempted to get a JSON field by index, but the index is out of range");
+			JAXUP_THROW("Attempted to get a JSON field by index, but the index is out of range");
 		}
 		auto& val = this->value.object->at(n);
 		return {val.first, val.second};
@@ -467,10 +467,10 @@ public:
 
 	std::pair<const std::string&, JsonNode&> getField(size_t n) {
 		if (this->type != JsonNodeType::VALUE_OBJECT) {
-			throw JsonException("Attempted to get a field out of a JSON ", getNodeTypeAsString(this->type), " node");
+			JAXUP_THROW("Attempted to get a field out of a JSON ", getNodeTypeAsString(this->type), " node");
 		}
 		if (n > this->value.object->size()) {
-			throw JsonException("Attempted to get a JSON field by index, but the index is out of range");
+			JAXUP_THROW("Attempted to get a JSON field by index, but the index is out of range");
 		}
 		auto& val = this->value.object->at(n);
 		return {val.first, val.second};
@@ -507,7 +507,7 @@ public:
 			break;
 		case JsonNodeType::VALUE_ARRAY:
 			if (maxDepth == 0) {
-				throw JsonException("Max depth exceeded while writing Array node");
+				JAXUP_THROW("Max depth exceeded while writing Array node");
 			}
 			generator.startArray();
 			for (const auto& node : *value.array) {
@@ -517,7 +517,7 @@ public:
 			break;
 		case JsonNodeType::VALUE_OBJECT:
 			if (maxDepth == 0) {
-				throw JsonException("Max depth exceeded while writing Object node");
+				JAXUP_THROW("Max depth exceeded while writing Object node");
 			}
 			generator.startObject();
 			for (const auto& pair : *value.object) {
@@ -558,7 +558,7 @@ public:
 			break;
 		case JsonToken::START_ARRAY: {
 			if (maxDepth == 0) {
-				throw JsonException("Max depth exceeded while parsing Array node");
+				JAXUP_THROW("Max depth exceeded while parsing Array node");
 			}
 			makeArray();
 			JsonNode newNode;
@@ -571,7 +571,7 @@ public:
 		} break;
 		case JsonToken::START_OBJECT: {
 			if (maxDepth == 0) {
-				throw JsonException("Max depth exceeded while parsing Object node");
+				JAXUP_THROW("Max depth exceeded while parsing Object node");
 			}
 			makeObject();
 			JsonNode newNode;

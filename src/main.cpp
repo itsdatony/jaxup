@@ -40,14 +40,14 @@ int main(int argc, char* argv[]) {
 
 	JsonToken token;
 	int i = 0;
-	try {
+	JAXUP_TRY {
 		JsonFactory factory;
 		std::shared_ptr<JsonParser<FILE*>> parser = factory.createJsonParser(
 			inputFile);
 		while ((token = parser->nextToken()) != JsonToken::NOT_AVAILABLE) {
 			++i;
 		}
-	} catch (const JsonException& e) {
+	} JAXUP_CATCH (const JsonException& e) {
 		std::cerr << "Failed to parse file: " << e.what() << std::endl;
 		error = 1;
 	}

@@ -106,7 +106,7 @@ private:
 		if (!tagStack.empty()) {
 			JsonToken parent = tagStack.back();
 			if (parent == JsonToken::START_OBJECT && token != JsonToken::FIELD_NAME) {
-				throw JsonException("Tried to write a value without giving it a field name");
+				JAXUP_THROW("Tried to write a value without giving it a field name");
 			}
 			if (parent == JsonToken::START_ARRAY && token != JsonToken::START_ARRAY) {
 				writeBuff(',');
@@ -177,7 +177,7 @@ private:
 	inline int writeDoubleToBuff(double value, char* buff) {
 		int len = numeric::ryu(value, buff);
 		if (len < 0) {
-			throw JsonException("Failed to serialize double");
+			JAXUP_THROW("Failed to serialize double");
 		}
 		if ((unsigned int)len > sizeof(doubleBuff)) {
 			len = sizeof(doubleBuff);
@@ -260,7 +260,7 @@ public:
 
 	void writeFieldName(const std::string& field) {
 		if (tagStack.empty() || tagStack.back() != JsonToken::START_OBJECT) {
-			throw JsonException("Tried to write a field name outside of an object: ", field);
+			JAXUP_THROW("Tried to write a field name outside of an object: ", field);
 		}
 		if (token != JsonToken::START_OBJECT) {
 			writeBuff(',');
@@ -294,7 +294,7 @@ public:
 
 	void endObject() {
 		if (tagStack.empty() || tagStack.back() != JsonToken::START_OBJECT) {
-			throw JsonException("Tried to close an object while outside of an object");
+			JAXUP_THROW("Tried to close an object while outside of an object");
 		}
 		token = JsonToken::END_OBJECT;
 		tagStack.pop_back();
@@ -322,7 +322,7 @@ public:
 
 	void endArray() {
 		if (tagStack.empty() || tagStack.back() != JsonToken::START_ARRAY) {
-			throw JsonException("Tried to close an array while outside of an array");
+			JAXUP_THROW("Tried to close an array while outside of an array");
 		}
 		token = JsonToken::END_ARRAY;
 		tagStack.pop_back();

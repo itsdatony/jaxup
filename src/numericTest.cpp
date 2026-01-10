@@ -58,9 +58,9 @@ int testDouble(double d, jaxup::JsonParser<std::istream>& parser, jaxup::JsonGen
 		error |= 2;
 	}
 	ss.clear();
-	try {
+	JAXUP_TRY {
 		parser.nextToken();
-	} catch (std::exception& e) {
+	} JAXUP_CATCH (JsonException& e) {
 		std::cout << "Parser raised exception: " << e.what() << std::endl;
 		error |= 1;
 		return error;
@@ -78,9 +78,9 @@ int testDouble(double d, jaxup::JsonParser<std::istream>& parser, jaxup::JsonGen
 	std::snprintf(buff, 200, "%1.16le", d);
 	ss.str(buff);
 	ss.clear();
-	try {
+	JAXUP_TRY {
 		parser.nextToken();
-	} catch (std::exception& e) {
+	} JAXUP_CATCH (JsonException& e) {
 		std::cout << "Parser raised exception: " << e.what() << std::endl;
 		error |= 1;
 		return error;

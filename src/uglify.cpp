@@ -93,9 +93,9 @@ int main(int argc, char* argv[]) {
 	}
 
 	int numTokens = 0;
-	try {
+	JAXUP_TRY {
 		numTokens = streamingCopy(inputFile, outputFile, prettify);
-	} catch (const JsonException& e) {
+	} JAXUP_CATCH (const JsonException& e) {
 		std::cerr << "Failed to uglify file: " << e.what() << std::endl;
 		return 1;
 	}

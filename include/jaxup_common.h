@@ -76,6 +76,8 @@ static inline std::string getTokenAsString(JsonToken t) {
 	}
 }
 
+#if (defined(__EXCEPTIONS) || defined(_HAS_EXCEPTIONS)) && !defined(JAXUP_NO_EXCEPTIONS)
+
 class JsonException : public std::exception {
 public:
 	JsonException(const std::string& text) : text(text) {
@@ -99,6 +101,26 @@ private:
 		return first;
 	}
 };
+
+#define JAXUP_THROW(...) throw JsonException(__VA_ARGS__)
+#define JAXUP_TRY try
+#define JAXUP_CATCH(condition) catch(condition)
+
+#else
+
+class JsonException {
+public:
+	const char* what() const { return ""; }
+};
+
+static JsonException JAXUP_DUMMY_EXCEPTION = {};
+
+#define JAXUP_THROW(...) std::exit(1);
+#define JAXUP_TRY
+#define JAXUP_CATCH(condition) for(condition = JAXUP_DUMMY_EXCEPTION; false;)
+
+#endif
+
 }
 
 #endif
