@@ -42,8 +42,11 @@ add_executable(nodeCopy src/nodeCopy.cpp)
 add_executable(numericTest src/numericTest.cpp)
 target_link_libraries(numericTest jaxupPowerCache)
 
+add_executable(inlineTest src/inlineTest)
+
 install(DIRECTORY include/ DESTINATION include/jaxup FILES_MATCHING PATTERN "*.h")
 install(TARGETS jaxupPowerCache DESTINATION lib)
 
 include(CTest)
 add_test(numericTest numericTest)
+add_test(inlineTest inlineTest)

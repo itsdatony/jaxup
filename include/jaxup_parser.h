@@ -41,16 +41,18 @@ class JsonSource<std::istream, size> {
 public:
 	JsonSource(std::istream& input) : input(input) {
 	}
-	inline size_t loadMore(char inputBuffer[size]) {
+	inline size_t loadMore(const char* &inputBuffer) {
+		inputBuffer = buffer;
 		if (input.eof() || input.bad()) {
 			return 0;
 		}
-		input.read(&inputBuffer[0], size);
+		input.read(&buffer[0], size);
 		return static_cast<size_t>(input.gcount());
 	}
 
 private:
 	std::istream& input;
+	char buffer[size];
 };
 
 template <size_t size>
@@ -58,15 +60,75 @@ class JsonSource<FILE*, size> {
 public:
 	JsonSource(FILE* input) : input(input) {
 	}
-	inline size_t loadMore(char inputBuffer[size]) {
+	inline size_t loadMore(const char* &inputBuffer) {
+		inputBuffer = buffer;
 		if (input == nullptr) {
 			return 0;
 		}
-		return fread(&inputBuffer[0], 1, size, input);
+		return fread(&buffer[0], 1, size, input);
 	}
 
 private:
 	FILE* input;
+	char buffer[size];
+};
+
+template <size_t N, size_t size>
+class JsonSource<const char[N], size> {
+public:
+	JsonSource(const char (&input)[N]) : input(input) {
+	}
+	inline size_t loadMore(const char* &inputBuffer) {
+		inputBuffer = input;
+		if (read) {
+			return 0;
+		}
+		read = true;
+		return N-1;
+	}
+
+private:
+	const char (&input)[N];
+	bool read = false;
+};
+
+template <size_t size>
+class JsonSource<const char*, size> {
+public:
+	JsonSource(const char* &input, size_t n) : input(input), n(n) {
+	}
+	inline size_t loadMore(const char* &inputBuffer) {
+		inputBuffer = input;
+		if (read) {
+			return 0;
+		}
+		read = true;
+		return n;
+	}
+
+private:
+	const char* input;
+	const size_t n;
+	bool read = false;
+};
+
+template <size_t size>
+class JsonSource<std::string, size> {
+public:
+	JsonSource(const std::string& input) : input(input) {
+	}
+	inline size_t loadMore(const char* &inputBuffer) {
+		inputBuffer = input.c_str();
+		if (read) {
+			return 0;
+		}
+		read = true;
+		return input.size();
+	}
+
+private:
+	const std::string& input;
+	bool read = false;
 };
 
 static inline int getIntFromChar(char c) {
@@ -81,13 +143,14 @@ private:
 	JsonToken token = JsonToken::NOT_AVAILABLE;
 	int inputOffset = 0;
 	int inputSize = 0;
-	char inputBuffer[initialBuffSize];
+	const char* inputBuffer;
 	std::string currentName, currentString;
 	std::vector<JsonToken> tagStack;
 	JsonSource<source, initialBuffSize> input;
 
 public:
-	JsonParser(source& input) : currentName(""), currentString(""), input(input) {
+	template<typename ... Args>
+	JsonParser(Args&& ... args) : currentName(""), currentString(""), input(std::forward<Args>(args) ...) {
 		currentName.reserve(32);
 		currentString.reserve(initialBuffSize);
 		tagStack.reserve(32);

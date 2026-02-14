@@ -28,7 +28,7 @@
 
 namespace jaxup {
 
-static const unsigned int initialBuffSize = 8192*4;
+static constexpr unsigned int initialBuffSize = 8192*4;
 
 enum class JsonToken {
 	NOT_AVAILABLE,

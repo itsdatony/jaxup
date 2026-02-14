@@ -26,6 +26,8 @@
 #include "jaxup_generator.h"
 #include "jaxup_parser.h"
 #include "jaxup_node.h"
+
+#include <cstring>
 #include <memory>
 
 namespace jaxup {
@@ -37,6 +39,19 @@ public:
 	}
 	std::shared_ptr<JsonParser<FILE*>> createJsonParser(FILE* inputFile) {
 		return std::make_shared<JsonParser<FILE*>>(inputFile);
+	}
+	template<size_t N>
+	std::shared_ptr<JsonParser<const char[N]>> createJsonParser(const char (&input)[N]) {
+		return std::make_shared<JsonParser<const char[N]>>(input);
+	}
+	std::shared_ptr<JsonParser<const char*>> createJsonParser(const char* &input, size_t size) {
+		return std::make_shared<JsonParser<const char*>>(input, size);
+	}
+	std::shared_ptr<JsonParser<const char*>> createJsonParser(const char* &input) {
+		return std::make_shared<JsonParser<const char*>>(input, std::strlen(input));
+	}
+	std::shared_ptr<JsonParser<std::string>> createJsonParser(std::string& input) {
+		return std::make_shared<JsonParser<std::string>>(input);
 	}
 	std::shared_ptr<JsonGenerator<std::ostream>> createJsonGenerator(
 		std::ostream& outputStream, bool prettyPrint = false) {
