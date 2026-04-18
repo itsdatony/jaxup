@@ -77,23 +77,23 @@ private:
 	bool prettyPrint;
 
 	inline void writeBuff(char c) {
+		outputBuffer[outputSize++] = c;
 		if (outputSize >= initialBuffSize) {
 			flush();
 		}
-		outputBuffer[outputSize++] = c;
 	}
 
 	inline void writeBuff(const char* c, std::size_t length) {
-		if (outputSize + length <= initialBuffSize) {
-			std::memcpy(&outputBuffer[outputSize], c, length);
-			outputSize += length;
-		} else {
-			std::size_t first = initialBuffSize - outputSize;
-			std::memcpy(&outputBuffer[outputSize], c, first);
+		while (outputSize + length >= initialBuffSize) {
+			std::size_t chunkSize = initialBuffSize - outputSize;
+			std::memcpy(&outputBuffer[outputSize], c, chunkSize);
 			outputSize = initialBuffSize;
 			flush();
-			length -= first;
-			std::memcpy(outputBuffer, c + first, length);
+			length -= chunkSize;
+			c += chunkSize;
+		}
+		if (length > 0) {
+			std::memcpy(&outputBuffer[outputSize], c, length);
 			outputSize += length;
 		}
 	}
@@ -207,6 +207,9 @@ public:
 		if (sizeof(doubleBuff) <= initialBuffSize - outputSize) {
 			int len = writeDoubleToBuff(value, &outputBuffer[outputSize]);
 			outputSize += len;
+			if (outputSize >= initialBuffSize) {
+				flush();
+			}
 		} else {
 			int len = writeDoubleToBuff(value, doubleBuff);
 			writeBuff(doubleBuff, len);
