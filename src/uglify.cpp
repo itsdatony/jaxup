@@ -23,6 +23,7 @@
 #include <chrono>
 #include <fstream>
 #include <iostream>
+#include <memory>
 #include <jaxup.h>
 
 using namespace jaxup;
@@ -77,6 +78,12 @@ int streamingCopy(FILE* inputFile, FILE* outputFile, bool prettify) {
 	return i;
 }
 
+struct FileDeleter {
+	void operator() (FILE* file) {
+		fclose(file);
+	};
+};
+
 int main(int argc, char* argv[]) {
 	if (argc < 3) {
 		std::cerr << "Expected format: " << argv[0] << " inputFile outputFile" << std::endl;
@@ -85,8 +92,18 @@ int main(int argc, char* argv[]) {
 	auto start = std::chrono::high_resolution_clock::now();
 	//std::ifstream inputFile(argv[1]);
 	//std::ofstream outputFile(argv[2]);
-	FILE* inputFile = fopen(argv[1], "r");
-	FILE* outputFile = fopen(argv[2], "w");
+	auto inputFile = std::unique_ptr<FILE,FileDeleter>(fopen(argv[1], "r"));
+	if (inputFile == nullptr) {
+		std::cerr << "Failed to open input file: " << argv[1] << std::endl;
+		return -1;
+	}
+
+	auto outputFile = std::unique_ptr<FILE,FileDeleter>(fopen(argv[2], "w"));
+	if (inputFile == nullptr) {
+		std::cerr << "Failed to open output file: " << argv[2] << std::endl;
+		return -1;
+	}
+
 	bool prettify = false;
 	if (argc > 3 && std::string("--prettify") == argv[3]) {
 		prettify = true;
@@ -94,7 +111,7 @@ int main(int argc, char* argv[]) {
 
 	int numTokens = 0;
 	try {
-		numTokens = streamingCopy(inputFile, outputFile, prettify);
+		numTokens = streamingCopy(inputFile.get(), outputFile.get(), prettify);
 	} catch (const JsonException& e) {
 		std::cerr << "Failed to uglify file: " << e.what() << std::endl;
 		return 1;
